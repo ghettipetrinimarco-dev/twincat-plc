@@ -1,0 +1,19 @@
+RESOURCE
+
+TASK Input_Output (PRIORITY := 0, INTERVAL := T#0.100ms);
+Gestione_Encoder();
+Gestione_Espulsione();
+{Additional_info : 1,0,0,0,1,4294967295}
+END_TASK
+
+TASK Camera (PRIORITY := 1, INTERVAL := T#0.200ms);
+Sensore_NIR();
+{Additional_info : 1,0,0,0,1,4294967295}
+END_TASK
+
+TASK Elaboration (PRIORITY := 2, INTERVAL := T#10ms);
+Processing();
+{Additional_info : 1,0,0,0,1,4294967295}
+END_TASK
+
+END_RESOURCE

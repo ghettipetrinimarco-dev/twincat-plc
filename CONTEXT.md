@@ -1,6 +1,6 @@
 # CONTEXT.md — Fonte di Verità del Progetto
 
-> Aggiornato: 2026-05-05 (sessione 2 — codice sorgente completo acquisito)
+> Aggiornato: 2026-05-05 (sessione 3 — task configuration acquisita, DISTANZA risolta)
 > Leggere sempre prima di toccare qualsiasi file.
 
 ---
@@ -39,12 +39,12 @@ Il sensore NIR è su una subnet separata rispetto alla rete Modbus.
 
 ## Architettura POU
 
-| POU | Task | Funzione |
-|---|---|---|
-| `Sensore_NIR` | Task 2 | Comunicazione UDP col sensore, riempie buffer MSI_data/MSI_elab, setta track_mat_select |
-| `Gestione_Encoder` | Task 1 | Legge encoder, scorre posizioni buffer, attiva Output_NIR e incrementa NUM_SELEZIONATI |
-| `Gestione_Espulsione` | Task 1 | Pilota Out_1..117 (EV fisiche), diagnostica I/O EtherCAT, pressione |
-| `Processing` | Task 3 | Calcola percentuali, peso, Modbus, gestione licenza, cmd ricetta |
+| POU | Task | Ciclo | Priorità | Funzione |
+|---|---|---|---|---|
+| `Gestione_Encoder` | Input_Output | **100 µs** | 0 (max) | Legge encoder, scorre posizioni buffer, attiva Output_NIR e incrementa NUM_SELEZIONATI |
+| `Gestione_Espulsione` | Input_Output | **100 µs** | 0 (max) | Pilota Out_1..117 (EV fisiche), diagnostica I/O EtherCAT, pressione |
+| `Sensore_NIR` | Camera | **200 µs** | 1 | Comunicazione UDP col sensore, riempie buffer MSI_data/MSI_elab, setta track_mat_select |
+| `Processing` | Elaboration | **10 ms** | 2 (min) | Calcola percentuali, peso, Modbus, gestione licenza, cmd ricetta |
 
 ---
 
@@ -162,7 +162,7 @@ Per sbloccare: inserire password dall'HMI → `NUM_PW` sale → `ENABLE:=FALSE`.
 | `SVILUPPO_ESTERNO` | 656 mm | Circonferenza rullo encoder |
 | `BUFFER_SIZE` | 150 | Pacchetti NIR in volo contemporaneamente |
 | `APERTURA_EV` | 15 ms | Durata apertura elettrovalvola |
-| `DISTANZA` | 200 | Ritardo sparo (⚠️ unità: impulsi o mm?) |
+| `DISTANZA` | 200 | Ritardo sparo in **impulsi encoder** (NON mm). 200 × (656/250) = **524,8 mm** distanza fisica sensore→EV |
 | `PESO_MATERIALE` | 240 | Peso specifico materiale (g?) |
 | `Machine_name` | NIR_1500.117 | 1500mm larghezza, 117 tracce |
 
@@ -192,6 +192,7 @@ Pacchetto dati: 121 byte (`RX_NUM_NIR=121` = 117 tracce + 5 header - 1)
 | 2026-05-05 | Trigger Modbus [50] non implementato | Accordo con Daniele: gestionale usa solo scrittura su [51] |
 | 2026-05-05 | Scala ×10 per tutti i REAL | Compatibilità SCADA |
 | 2026-05-05 | Block Read ~100 registri | Evita instabilità letture singole TS6250 |
+| 2026-05-05 | Task Input_Output a 100µs (Encoder+Espulsione), Camera a 200µs (NIR), Elaboration a 10ms (Processing) | Latenza encoder critica: 100µs garantisce granularità sub-mm a velocità tipiche |
 | 2026-05-05 | ENABLE=TRUE = blocco licenza (non "abilitazione") | Naming controintuitivo, logica confermata da Processing |
 
 ---
@@ -209,7 +210,7 @@ Pacchetto dati: 121 byte (`RX_NUM_NIR=121` = 117 tracce + 5 header - 1)
 ## TODO / Buchi Aperti
 
 ### Critici
-- [ ] **Unità DISTANZA**: impulsi encoder o mm? Chiedere valore attuale in produzione e verificare se lo sparo fisico è nel punto corretto
+- [x] **Unità DISTANZA**: **RISOLTO** — impulsi encoder. 200 × (656mm/250) = 524,8mm distanza fisica. Il commento nel codice che diceva "mm" era errato.
 - [ ] **Indici Modbus 43..50**: non scritti. Confermare che siano intenzionalmente vuoti
 - [ ] **Indici 1 e 5**: non scritti. Riservati?
 - [ ] **Notazione SCADA Daniele**: Base 0 o Base 1? Verificare strumentalmente
@@ -232,3 +233,4 @@ Pacchetto dati: 121 byte (`RX_NUM_NIR=121` = 117 tracce + 5 header - 1)
 |---|---|
 | 2026-05-05 | Prima sessione: raccolta contesto, struttura repo, documentazione iniziale |
 | 2026-05-05 | Seconda sessione: acquisizione codice sorgente completo (4 POU + GVL), analisi architettura |
+| 2026-05-05 | Terza sessione: acquisizione TWINCAT_CONFIGURATION.EXP e TASK_CONFIGURATION.EXP, risoluzione DISTANZA (impulsi encoder, 524,8mm fisici) |
