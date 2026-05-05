@@ -235,6 +235,17 @@ Pacchetto dati: 121 byte (`RX_NUM_NIR=121` = 117 tracce + 5 header - 1)
 
 ---
 
+## Stato Repository vs Macchine Reali
+
+| File | Fonte | Validità |
+|---|---|---|
+| Tutto tranne TWINCAT_CONFIGURATION | Beckhoff (.31 o .32) | Logica identica su tutte e 4 le macchine |
+| `TWINCAT_CONFIGURATION.EXP` | Beckhoff (.31 o .32) | ⚠️ Valido solo per .31/.32 — Elmak (.33/.34) ha hardware diverso, mapping I/O probabilmente differente |
+
+**⚠️ Da fare:** Esportare `TWINCAT_CONFIGURATION.EXP` da una Elmak (.33 o .34) e archiviarla come `TWINCAT_CONFIGURATION_ELMAK.EXP`. Finché non è acquisita, il repo non rappresenta fedelmente le macchine Elmak.
+
+---
+
 ## Storico Sessioni
 
 | Data | Attività |
