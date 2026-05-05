@@ -1,0 +1,29 @@
+(* Generated automatically by TwinCAT - (read only) *)
+(* See full content in git history - archived from export_1.6 *)
+VAR_CONFIG
+	Gestione_Encoder.Counter AT %IB0 : UDINT;
+	Gestione_Encoder.Encoder_STATE AT %IB4 : UINT;
+	Gestione_Encoder.Period AT %IB6 : UDINT;
+	Gestione_Espulsione.EK1100_STATE AT %IB10 : UINT;
+	Gestione_Espulsione.EL2004_STATE AT %IB14 : UINT;
+	Gestione_Espulsione.OUT_1_STATE AT %IB16 : UINT;
+	Gestione_Espulsione.OUT_2_STATE AT %IB18 : UINT;
+	Gestione_Espulsione.OUT_3_STATE AT %IB20 : UINT;
+	Gestione_Espulsione.OUT_4_STATE AT %IB22 : UINT;
+	Gestione_Espulsione.OUT_5_STATE AT %IB24 : UINT;
+	Gestione_Espulsione.OUT_6_STATE AT %IB26 : UINT;
+	Gestione_Espulsione.OUT_7_STATE AT %IB28 : UINT;
+	Gestione_Espulsione.OUT_8_STATE AT %IB30 : UINT;
+	Gestione_Espulsione.ANALOG_IN_STATE AT %IB32 : UINT;
+	Gestione_Espulsione.PRESSIONE AT %IB34 : INT;
+	Gestione_Espulsione.FLUSSOSTATO AT %IB36 : INT;
+	Gestione_Espulsione.Out_1 AT %QX0.0 : BOOL;
+	(* Out_2..Out_112: OUT_1..OUT_7 EL2809, %QX0.1..%QX13.7 *)
+	Gestione_Espulsione.Out_113 AT %QX14.0 : BOOL;
+	Gestione_Espulsione.Out_114 AT %QX14.1 : BOOL;
+	Gestione_Espulsione.Out_115 AT %QX14.2 : BOOL;
+	Gestione_Espulsione.Out_116 AT %QX14.3 : BOOL;
+	Gestione_Espulsione.Out_117 AT %QX14.4 : BOOL;
+	.Errore_connessione_sensore AT %QX49.2 : BOOL;
+	.Macchina_pronta AT %QX49.3 : BOOL;
+END_VAR
