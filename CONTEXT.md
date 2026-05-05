@@ -1,77 +1,187 @@
 # CONTEXT.md — Fonte di Verità del Progetto
 
-> Aggiornato: 2026-05-05
-> Leggere sempre prima di toccare qualunque file.
+> Aggiornato: 2026-05-05 (sessione 2 — codice sorgente completo acquisito)
+> Leggere sempre prima di toccare qualsiasi file.
 
 ---
 
 ## Descrizione Progetto
-Sistemi di **selezione e scarto automatizzato materiali via NIR** con attuazione pneumatica.
-Linea composta da 3 macchine indipendenti, tutte con TwinCAT SoftPLC su Windows.
-Comunicazione esterna tramite **Modbus TCP** verso gestionale SCADA (Daniele).
+Selezionatrice ottica NIR con scarto pneumatico — 117 tracce, nastro trasportatore.
+Il sensore LLA (MSI) rileva il materiale via UDP, TwinCAT elabora e comanda 117 elettrovalvole pneumatiche.
+3 macchine identiche in produzione, tutte TwinCAT 2 SoftPLC su Windows.
 
 ---
 
 ## Macchine
 
-| IP | Hardware | PLC | Stato |
+| IP | Hardware | Runtime | Note |
 |---|---|---|---|
-| 192.168.1.31 | Beckhoff nativo | TwinCAT SoftPLC | In produzione |
-| 192.168.1.32 | Beckhoff nativo | TwinCAT SoftPLC | In produzione |
-| 192.168.1.34 | PC Elmak (SoftPLC) | TwinCAT SoftPLC | In produzione |
+| 192.168.1.31 | Beckhoff nativo | TwinCAT 2 SoftPLC | In produzione |
+| 192.168.1.32 | Beckhoff nativo | TwinCAT 2 SoftPLC | In produzione |
+| 192.168.1.34 | PC Elmak (hw) | TwinCAT 2 SoftPLC | Ex DHCP .113 / HMIsemp |
 
-- Gateway: `192.168.1.1`
-- DNS aziendali: `85.159.176.161` / `85.159.176.162` (obbligatori con IP statico)
+- Gateway: `192.168.1.1` | DNS: `85.159.176.161` / `.162`
 - Teleassistenza: TeamViewer / AnyDesk
+- Progetto attivo: `Sort_Selection_v1_6.pro` (v1.5 tenuta come backup)
 
 ---
 
-## Architettura Software
+## Reti
 
-### POU Principale
-- **`Processing`** — programma ST ciclico, uguale su tutte e 3 le macchine
-- Gestisce: logica NIR, calcolo percentuali, allarmi, comunicazione Modbus
+| Rete | Scopo | Dispositivi |
+|---|---|---|
+| `192.168.1.x` | Supervisione / Modbus TCP | PLC, SCADA (Daniele) |
+| `192.168.0.x` | Campo / NIR (UDP) | TwinCAT (`192.168.0.1`), Sensore LLA (`192.168.0.10`) |
 
-### Comunicazione Esterna
-- Protocollo: **Modbus TCP** (TS6250), porta 502
-- Area dati: `Modbus_Area AT %MW0 : ARRAY [0..51] OF WORD`
-- Base SCADA: `12288` → `Indirizzo SCADA = 12288 + Indice Array`
-- Scala REAL: `valore × 10.0 → WORD` (client divide /10)
-- Logica allarme: `1 = OK`, `0 = Allarme`
+Il sensore NIR è su una subnet separata rispetto alla rete Modbus.
 
-### File Principali
+---
 
-| File | Descrizione |
-|---|---|
-| `src/Processing/modbus_mapping.st` | Codice ST mappatura Modbus (parziale, vedi TODO) |
-| `docs/modbus/mappa-registri.md` | Tabella completa registri Modbus |
-| `docs/modbus/integrazione-scada.md` | Linee guida per Daniele (SCADA) |
-| `docs/modbus/eccezioni-vs-pdf.md` | Diff rispetto alla spec ufficiale V2 |
-| `docs/network/architettura-rete.md` | IP, DNS, firewall |
-| `docs/network/modbus-tcp-server.md` | Installazione e diagnostica TS6250 |
-| `docs/hardware/topologia-macchine.md` | Descrizione 3 macchine |
-| `docs/macchina/panoramica.md` | Panoramica funzionale impianto |
+## Architettura POU
+
+| POU | Task | Funzione |
+|---|---|---|
+| `Sensore_NIR` | Task 2 | Comunicazione UDP col sensore, riempie buffer MSI_data/MSI_elab, setta track_mat_select |
+| `Gestione_Encoder` | Task 1 | Legge encoder, scorre posizioni buffer, attiva Output_NIR e incrementa NUM_SELEZIONATI |
+| `Gestione_Espulsione` | Task 1 | Pilota Out_1..117 (EV fisiche), diagnostica I/O EtherCAT, pressione |
+| `Processing` | Task 3 | Calcola percentuali, peso, Modbus, gestione licenza, cmd ricetta |
+
+---
+
+## Catena di Selezione Completa
+
+```
+[Sensore NIR LLA] --(UDP 121 byte)--> Sensore_NIR
+  → per ogni traccia: confronta codice con CODICI_MATERIALI[]
+  → se match E MATERIALI_ATTIVI[i]: track_mat_select[traccia] := TRUE
+  → NUM_CAMPIONATI[i]++
+  → MSI_data[index_nir].Position := 0  (pacchetto entra nel buffer)
+
+[Encoder EtherCAT] --> Gestione_Encoder
+  → ogni impulso: Position += PASSO_ENCODER per ogni pacchetto nel buffer
+  → quando Position = DISTANZA_EV:
+      se track_mat_select[traccia]: Output_NIR[traccia] := TRUE
+      NUM_SELEZIONATI[i]++
+
+Gestione_Espulsione (ogni ciclo):
+  → Out_X := CMD_OP_EV[X] OR Output_NIR[X]  (uscita digitale 24V)
+  → timer APERTURA_EV ms → Output_NIR[X] := FALSE (reset)
+
+Processing (ogni minuto):
+  → PERC_SELEZIONATI[i] = NUM_SELEZIONATI[i] / Totale * 100
+  → PERC_CAMPIONATI[i]  = NUM_CAMPIONATI[i]  / Totale * 100
+  → Modbus_Area[6..21]  = PERC_SELEZIONATI[0..15] * 10
+  → Modbus_Area[22..37] = PERC_CAMPIONATI[0..15]  * 10
+```
 
 ---
 
 ## Variabili Chiave
 
-| Variabile | Tipo | Significato |
+| Variabile | Tipo | Dove | Significato |
+|---|---|---|---|
+| `CODICI_MATERIALI[0..100]` | BYTE | PERSISTENT | Codici materiali dal sensore NIR |
+| `NOMI_MATERIALI[0..100,1..28]` | BYTE | PERSISTENT | Nomi materiali |
+| `MATERIALI_ATTIVI[0..100]` | BOOL | PERSISTENT | Quali materiali vanno scartati |
+| `NUM_SELEZIONATI[0..100]` | UDINT | PERSISTENT | Contatore pezzi scartati per tipo |
+| `NUM_CAMPIONATI[0..100]` | UDINT | PERSISTENT | Contatore pezzi rilevati per tipo |
+| `PERC_SELEZIONATI[0..100]` | REAL | PERSISTENT | % scartati (calc in Processing) |
+| `PERC_CAMPIONATI[0..100]` | REAL | PERSISTENT | % campionati (calc in Processing) |
+| `Output_NIR[1..117]` | BOOL | Global | Comando espulsione per traccia |
+| `MSI_data[0..150]` | RX_NIR | Global | Buffer circolare pacchetti NIR raw |
+| `MSI_elab[0..150]` | RX_NIR_ELAB | Global | Buffer elaborato (filtro inquinamento) |
+| `INDEX_NIR` | UINT | Global | Puntatore scrittura buffer (= index_nir in Sensore_NIR) |
+| `DISTANZA` | UINT | PERSISTENT | Ritardo sparo EV (default 200) ⚠️ unità da chiarire |
+| `DISTANZA_EV` | UDINT | Global | = DISTANZA (assegnato in Processing) |
+| `APERTURA_EV` | INT | PERSISTENT | Durata apertura EV in ms (default 15) |
+| `ENABLE` | BOOL | PERSISTENT | TRUE = macchina BLOCCATA da licenza scaduta |
+| `ABIL_NIR` | BOOL | PERSISTENT | Abilita connessione sensore NIR |
+| `NIR_ATTIVO` | BOOL | Global | Stato=2 AND MSI_ok AND ENCODER_OK AND ABIL_NIR |
+| `DIAGNOSTICA_OK` | BOOL | Global | Tutti moduli EtherCAT in stato OP (=8) |
+| `Macchina_pronta` | BOOL (%Q*) | Global | SPEED>0.5 AND NIR_ATTIVO AND DIAGNOSTICA_OK |
+| `SKIP_EV` | INT | PERSISTENT | Numero tracce iniziali da ignorare |
+| `NUM_CODICI` | INT | PERSISTENT | Numero codici attivi (default 68) |
+| `STEP` | UINT | PERSISTENT | Modalità filtro inquinamento (1-4, 91-94, 99) |
+| `PROCESSING_DATA` | BOOL | PERSISTENT | Abilita filtro elaborazione dati |
+| `NUM_LOAD_ID` | BYTE | PERSISTENT | ID ricetta attiva |
+| `CMD_LOAD` | BOOL | Global | Trigger caricamento ricetta sul sensore |
+| `PESO_TOTALE` | REAL | PERSISTENT | Peso totale materiale scartato (kg) |
+| `KG_MINUTI` | REAL | Global | Kg/minuto (calcolato ogni 60s) |
+| `CARICO_MIN` | REAL | Global | % carico macchina al minuto |
+| `SPEED` | REAL | Global | Velocità nastro (m/s) |
+| `INTERVALLO_ORE_ISTANTANEO` | UDINT | PERSISTENT | Ore di utilizzo accumulate |
+
+---
+
+## Mappa Modbus TCP
+
+**Base SCADA:** `12288` | Formula: `Indirizzo = 12288 + Indice Array`
+**Funzione:** FC03 Read Holding Registers (da confermare)
+**Scala REAL:** `valore × 10 → WORD` (client divide /10)
+
+| Indice | SCADA | Variabile | Scala | Note |
+|---|---|---|---|---|
+| 0 | 12288 | `CARICO_MIN` | ×10 | |
+| 1 | 12289 | — | — | Non scritto |
+| 2 | 12290 | `Pressione_aria` | ×10 | |
+| 3 | 12291 | `Flussostato_aria` | ×10 | |
+| 4 | 12292 | `INTERVALLO_ORE_ISTANTANEO` | — | UDINT→WORD ⚠️ tronca a 65535 |
+| 5 | 12293 | — | — | Non scritto |
+| 6..21 | 12294..12309 | `PERC_SELEZIONATI[0..15]` | ×10 | Solo primi 16 di 101 |
+| 22..37 | 12310..12325 | `PERC_CAMPIONATI[0..15]` | ×10 | Solo primi 16 di 101 |
+| 38 | 12326 | `DIAGNOSTICA_OK` | — | 1=OK, 0=Allarme |
+| 39 | 12327 | `ENABLE` | — | ⚠️ 1=BLOCCATA (licenza scaduta), 0=normale |
+| 40 | 12328 | `KG_MINUTI` | ×10 | |
+| 41 | 12329 | `PESO_TOTALE` | ×10 | |
+| 42 | 12330 | `NUM_LOAD_ID` | — | Ricetta attiva (lettura) |
+| 43..50 | 12331..12338 | — | — | Non scritti |
+| 51 | 12339 | *(write target)* | — | SCADA scrive ID ricetta. Se >0: CMD_LOAD:=TRUE + reset |
+
+**⚠️ Registro 39:** Il valore `1` significa macchina BLOCCATA per licenza scaduta, NON "abilitata". Daniele deve interpretarlo come "stop forzato".
+
+---
+
+## Sistema di Licenza
+
+`ENABLE := TRUE` viene settato da Processing quando:
+- Le ore accumulate (`INTERVALLO_ORE_ISTANTANEO`) superano la soglia configurata, OPPURE
+- La data di sistema supera una delle date di scadenza (`data1..6_scadenza`)
+
+Quando `ENABLE=TRUE`, `Gestione_Encoder` è bloccato (`IF NOT ENABLE`) → nessuna espulsione.
+Il livello di scadenza attivo dipende da `NUM_PW` (0..5).
+Per sbloccare: inserire password dall'HMI → `NUM_PW` sale → `ENABLE:=FALSE`.
+
+---
+
+## Parametri Fisici Chiave
+
+| Parametro | Valore | Significato |
 |---|---|---|
-| `carico_min` | REAL | Carico minimo rilevato |
-| `Pressione_aria` | REAL | Pressione aria compressa |
-| `Flussostato_aria` | REAL | Portata aria compressa |
-| `intervallo_ore_istantaneo` | UDINT | Intervallo ore (⚠️ troncato a WORD) |
-| `PERC_SELEZIONATI[0..15]` | ARRAY OF REAL | % materiali selezionati |
-| `PERC_CAMPIONATI[0..15]` | ARRAY OF REAL | % materiali campionati |
-| `DIAGNOSTICA_OK` | BOOL | Diagnostica generale (1=OK) |
-| `ENABLE` | BOOL | Abilitazione macchina |
-| `KG_MINUTI` | REAL | Kg/minuto |
-| `PESO_TOTALE` | REAL | Peso totale ciclo |
-| `NUM_LOAD_ID` | BYTE | ID ricetta attiva (lettura) |
-| `CMD_LOAD` | BOOL | Comando caricamento ricetta |
-| `NUM_SELEZIONATI[i]` | UDINT | Contatore materiali selezionati per tipo |
-| `idx_mb` | INT | Indice loop FOR mappatura Modbus |
+| `NUM_TRACKS_NIR` | 117 | Tracce NIR (e EV) |
+| `IMPULSI_ENCODER` | 250 | Impulsi/giro encoder |
+| `SVILUPPO_ESTERNO` | 656 mm | Circonferenza rullo encoder |
+| `BUFFER_SIZE` | 150 | Pacchetti NIR in volo contemporaneamente |
+| `APERTURA_EV` | 15 ms | Durata apertura elettrovalvola |
+| `DISTANZA` | 200 | Ritardo sparo (⚠️ unità: impulsi o mm?) |
+| `PESO_MATERIALE` | 240 | Peso specifico materiale (g?) |
+| `Machine_name` | NIR_1500.117 | 1500mm larghezza, 117 tracce |
+
+---
+
+## Protocollo UDP Sensore NIR (LLA/MSI)
+
+Indirizzo: `192.168.0.10:1803` | Locale: `192.168.0.1:1803`
+Pacchetto dati: 121 byte (`RX_NUM_NIR=121` = 117 tracce + 5 header - 1)
+
+| Comando (hex) | Significato |
+|---|---|
+| `34 F0` | Online — richiedi dati |
+| `3F F0` | Offline |
+| `35 F0` | Calibrazione bianco |
+| `3A F0` | Calibrazione nero |
+| `36 [N] F0` | Carica ricetta N |
+| `3B F0` | Spegni sensore |
+| `32 01 F0` | Get types (leggi codici materiali) |
 
 ---
 
@@ -79,43 +189,46 @@ Comunicazione esterna tramite **Modbus TCP** verso gestionale SCADA (Daniele).
 
 | Data | Decisione | Motivo |
 |---|---|---|
-| 2026-05-05 | Trigger Modbus (reg. 12338/indice 50) non implementato | Accordo con Daniele: gestionale non usa il Trigger, sufficiente scrittura su indice 51 |
-| 2026-05-05 | Scala ×10 per tutti i REAL | Compatibilità con gestionale SCADA che legge WORD |
-| 2026-05-05 | Block Read da ~100 registri | Evita instabilità con letture singole su TS6250 |
-| 2026-05-05 | PC Elmak (.34) usa TwinCAT SoftPLC | Stesso codice e logica delle Beckhoff native |
+| 2026-05-05 | Trigger Modbus [50] non implementato | Accordo con Daniele: gestionale usa solo scrittura su [51] |
+| 2026-05-05 | Scala ×10 per tutti i REAL | Compatibilità SCADA |
+| 2026-05-05 | Block Read ~100 registri | Evita instabilità letture singole TS6250 |
+| 2026-05-05 | ENABLE=TRUE = blocco licenza (non "abilitazione") | Naming controintuitivo, logica confermata da Processing |
+
+---
+
+## Bug / Anomalie Noti
+
+| File | Descrizione | Gravità |
+|---|---|---|
+| `PROCESSING` | `SystemTaskInfoArr[3]` confrontato ma `[4]` salvato in `max_time_task` | Bassa (dato errato, non blocca) |
+| `GESTIONE_ESPULSIONE` | `Out_11` ha doppio `;;` | Irrilevante (TC2 lo ignora) |
+| `PROCESSING` | `UDINT_TO_WORD` su `INTERVALLO_ORE_ISTANTANEO` tronca a 65535 (~18h) | Media (dato Modbus wrappa silenziosamente) |
 
 ---
 
 ## TODO / Buchi Aperti
 
-### Critici (bloccanti per lavori futuri)
-- [ ] **Indici Modbus 43–49**: non documentati. Chiedere all'utente prima di qualunque modifica all'array.
-- [ ] **Indici 1 e 5**: non scritti nel codice. Riservati o dimenticati?
-- [ ] **UDINT→WORD indice 4** (`intervallo_ore_istantaneo`): voluto o bug latente? Se >65535 wrappa a 0.
-- [ ] **Logica ENABLE (indice 39)**: invertita (1=ON/0=OFF) o diretta? Da confermare.
-- [ ] **Notazione SCADA**: Daniele usa Base 0 o Base 1? Verificare strumentalmente su valore noto.
-- [ ] **`PERC_SELEZIONATI`/`PERC_CAMPIONATI`**: dichiarate in GVL o localmente nel POU `Processing`?
+### Critici
+- [ ] **Unità DISTANZA**: impulsi encoder o mm? Chiedere valore attuale in produzione e verificare se lo sparo fisico è nel punto corretto
+- [ ] **Indici Modbus 43..50**: non scritti. Confermare che siano intenzionalmente vuoti
+- [ ] **Indici 1 e 5**: non scritti. Riservati?
+- [ ] **Notazione SCADA Daniele**: Base 0 o Base 1? Verificare strumentalmente
+- [ ] **Registro 39 lato SCADA**: Daniele sa che 1=BLOCCATA (non "abilitata")?
 
-### Informativi (non bloccanti)
-- [ ] Versione TwinCAT (TC2/TC3 + build) su ciascuna macchina
-- [ ] Licenza TS6250 e SoftPLC sulla .34 (regolare o trial?)
-- [ ] Repository unico o 3 copie sincronizzate manualmente? (rischio drift)
-- [ ] Funzione Modbus: FC03 o FC04?
-- [ ] Frequenza polling SCADA (1s, 5s, on-change?)
-- [ ] Materiale trattato (plastica, vetro, RAEE, alimentare?)
-- [ ] Numero canali NIR per macchina, numero lane di scarto
-- [ ] Le 3 macchine lavorano in serie (cascata) o in parallelo?
-- [ ] La rete 192.168.1.x è condivisa con uffici/PC aziendali?
-- [ ] Soluzione firewall uniformata su tutte e 3 le macchine?
-
----
-
-## Modifiche in Corso
-*(nessuna — progetto in fase di documentazione iniziale)*
+### Informativi
+- [ ] Versione TwinCAT 2 (build esatta)
+- [ ] Licenza TS6250 — attiva o trial su ciascuna macchina?
+- [ ] Repo unico o 3 copie sincronizzate? (rischio drift)
+- [ ] FC03 o FC04 per Modbus?
+- [ ] Frequenza polling SCADA
+- [ ] `DISTANZA` valore attuale in produzione su .31, .32, .34
+- [ ] `APERTURA_EV` valore attuale (15ms è il default, potrebbe essere stato modificato)
 
 ---
 
 ## Storico Sessioni
+
 | Data | Attività |
 |---|---|
-| 2026-05-05 | Prima sessione: raccolta contesto, creazione struttura repo, archiviazione documentazione iniziale |
+| 2026-05-05 | Prima sessione: raccolta contesto, struttura repo, documentazione iniziale |
+| 2026-05-05 | Seconda sessione: acquisizione codice sorgente completo (4 POU + GVL), analisi architettura |
