@@ -14,11 +14,19 @@ Il sensore LLA (MSI) rileva il materiale via UDP, TwinCAT elabora e comanda 117 
 
 ## Macchine
 
-| IP | Hardware | Runtime | Note |
-|---|---|---|---|
-| 192.168.1.31 | Beckhoff nativo | TwinCAT 2 SoftPLC | In produzione |
-| 192.168.1.32 | Beckhoff nativo | TwinCAT 2 SoftPLC | In produzione |
-| 192.168.1.34 | PC Elmak (hw) | TwinCAT 2 SoftPLC | Ex DHCP .113 / HMIsemp |
+4 macchine totali, organizzate in 2 linee. Ogni linea = 2 nastri in sequenza (materiale passa dalla prima alla seconda).
+
+| IP | Hardware | Linea | Posizione | Runtime |
+|---|---|---|---|---|
+| 192.168.1.31 | Beckhoff nativo | Lavatrici (dispari) | 1° nastro | TwinCAT 2 SoftPLC |
+| 192.168.1.33 | PC Elmak | Lavatrici (dispari) | 2° nastro | TwinCAT 2 SoftPLC |
+| 192.168.1.32 | Beckhoff nativo | R4 (pari) | 1° nastro | TwinCAT 2 SoftPLC |
+| 192.168.1.34 | PC Elmak | R4 (pari) | 2° nastro | TwinCAT 2 SoftPLC |
+
+Flusso materiale linea lavatrici: ingresso → .31 → .33 → uscita
+Flusso materiale linea R4: ingresso → .32 → .34 → uscita
+
+Ogni macchina è un PLC indipendente (nastro proprio, NIR proprio, 117 EV proprie). Nessuna comunicazione diretta PLC↔PLC — coordinazione solo fisica (nastro).
 
 - Gateway: `192.168.1.1` | DNS: `85.159.176.161` / `.162`
 - Teleassistenza: TeamViewer / AnyDesk
