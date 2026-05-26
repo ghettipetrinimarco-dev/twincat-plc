@@ -1,0 +1,17 @@
+(*
+    BLOB_TRACKER — stato interno di un oggetto in corso di rilevamento.
+    Uno "blob" è un gruppo di tracce NIR attive spazialmente adiacenti
+    che si mantiene coerente tra scan consecutive.
+    MAX_BLOBS istanze attive simultanee sul nastro.
+*)
+TYPE BLOB_TRACKER :
+STRUCT
+    attivo              : BOOL;                 (* slot in uso *)
+    track_min           : INT;                  (* traccia più a sinistra *)
+    track_max           : INT;                  (* traccia più a destra *)
+    encoder_start       : UDINT;               (* posizione encoder alla prima scan *)
+    encoder_last_active : UDINT;               (* posizione encoder all'ultima scan attiva *)
+    n_pixel             : UDINT;               (* pixel materiale totali accumulati *)
+    mat_count           : ARRAY[0..15] OF UDINT; (* conteggio pixel per codice materiale *)
+END_STRUCT
+END_TYPE

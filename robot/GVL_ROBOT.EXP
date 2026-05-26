@@ -1,0 +1,60 @@
+(*
+    GVL_ROBOT — Variabili globali aggiuntive per progetto robot.
+    Da aggiungere al GVL esistente della macchina (Global_Variables).
+
+    NOTA: I valori numerici (SCAN_DISTANCE, ALTEZZA, ecc.) sono PLACEHOLDER.
+    Vanno misurati sul prototipo fisico prima del primo test.
+*)
+VAR_GLOBAL
+
+    (* ============================================================
+       PARAMETRI GEOMETRICI (da misurare sul prototipo)
+       ============================================================ *)
+    SCAN_DISTANCE       : REAL := 3.5;      (* mm tra una scan NIR e la successiva — MISURARE *)
+    DISTANCE_OFFSET     : REAL := 0.0;      (* offset posizione Y iniziale mm *)
+    ALTEZZA             : REAL := 200.0;    (* quota Z di presa mm — MISURARE *)
+    GRADI_ROTAZIONE     : REAL := 0.0;      (* orientamento pinza gradi *)
+    ATTESA_PRESA        : REAL := 0.5;      (* tempo attesa dopo discesa secondi *)
+    ATTESA_DEPOSITO     : REAL := 0.3;      (* tempo attesa al deposito secondi *)
+
+    (* ============================================================
+       BOX DI DEPOSITO (da configurare per ogni installazione)
+       Indice 0..7: fino a 8 box di destinazione
+       ============================================================ *)
+    X_BOX               : ARRAY[0..7] OF REAL; (* coordinate X deposito mm *)
+    Y_BOX               : ARRAY[0..7] OF REAL; (* coordinate Y deposito mm *)
+    Z_BOX               : ARRAY[0..7] OF REAL; (* coordinate Z deposito mm *)
+
+    (* quale box usare per ogni materiale (indice in X/Y/Z_BOX) *)
+    MATERIALI_ATTIVI_BOX : ARRAY[0..15] OF INT;
+
+    (* ============================================================
+       CODA PICK — oggetti completati in attesa di invio al robot
+       ============================================================ *)
+    OBJ_queue           : ARRAY[0..16] OF OBJ_PICK; (* 16 slot circolari *)
+    obj_head            : INT := 0; (* prossima scrittura *)
+    obj_tail            : INT := 0; (* prossima lettura *)
+
+    (* ============================================================
+       TRACKER BLOB — stato interno segmentazione
+       ============================================================ *)
+    blob_trackers       : ARRAY[0..5] OF BLOB_TRACKER;
+
+    (* ============================================================
+       COSTANTI SEGMENTAZIONE
+       ============================================================ *)
+    OBJ_TRACK_TOLERANCE : INT  := 3;   (* tracce di tolleranza laterale *)
+    OBJ_GAP_ENCODER     : UDINT := 50; (* impulsi encoder = fine oggetto (~131mm) *)
+    MAX_OBJ_QUEUE       : INT  := 16;
+    MAX_BLOBS           : INT  := 6;
+
+    (* ============================================================
+       COMUNICAZIONE ROBOT (IP da configurare)
+       ============================================================ *)
+    IP_ROBOT            : STRING := '192.168.1.100'; (* IP controller robot — DA CONFIGURARE *)
+    PORT_ROBOT          : UINT   := 10000;           (* porta TCP robot — DA CONFIGURARE *)
+
+    (* Contatore tag pick (progressivo, inviato nel campo UiTag) *)
+    UiTag_robot         : INT := 0;
+
+END_VAR
