@@ -108,13 +108,15 @@ Leggere in questo ordine:
 1. `docs/robot/sintesi-operativa.md`
 2. `docs/robot/analisi-preliminare.md`
 3. `docs/robot/analisi-gestionerobot-pickmaster.md`
-4. `docs/robot/mvp-tecnico.md`
-5. `docs/robot/fase-1-specifica-implementazione.md`
-6. `docs/robot/scaffold-st-note-integrazione.md`
-7. `docs/robot/verifica-statica-scaffold.md`
-8. `docs/robot/comando-robot-da-target.md`
-9. `docs/robot/checklist-prima-compilazione.md`
-10. `docs/robot/pacchetto-import-twincat.md`
+4. `docs/robot/lavoro-offline-senza-twincat.md`
+5. `docs/robot/specifica-pickmaster-driver.md`
+6. `docs/robot/mvp-tecnico.md`
+7. `docs/robot/fase-1-specifica-implementazione.md`
+8. `docs/robot/scaffold-st-note-integrazione.md`
+9. `docs/robot/verifica-statica-scaffold.md`
+10. `docs/robot/comando-robot-da-target.md`
+11. `docs/robot/checklist-prima-compilazione.md`
+12. `docs/robot/pacchetto-import-twincat.md`
 
 Per dati mancanti:
 
@@ -166,6 +168,8 @@ Chiedere una review critica su:
 8. Ci sono incompatibilita' TwinCAT 2 evidenti nei file `.EXP` nuovi?
 9. Meglio tenere object builder in PLC o spostarlo su PC esterno?
 10. Quali test minimi fare in TwinCAT prima di toccare macchina reale?
+11. La specifica `Robot_PickMasterDriver` e' coerente con il vecchio `gestionerobot.txt`?
+12. Quali variabili globali minime servono per rendere configurabile PickMaster/UserHook?
 
 ## Bloccanti per robot reale
 

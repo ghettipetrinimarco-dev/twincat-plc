@@ -22,13 +22,15 @@ Per andare in azienda e recuperare dati:
 
 Per lavorare sul codice:
 
-1. `verifica-statica-scaffold.md`
-2. `scaffold-st-note-integrazione.md`
-3. `checklist-prima-compilazione.md`
-4. `pacchetto-import-twincat.md`
-5. `piano-test-twincat-fase-1.md`
-6. `comando-robot-da-target.md`
-7. `src/Robot/README.md`
+1. `lavoro-offline-senza-twincat.md`
+2. `specifica-pickmaster-driver.md`
+3. `verifica-statica-scaffold.md`
+4. `scaffold-st-note-integrazione.md`
+5. `checklist-prima-compilazione.md`
+6. `pacchetto-import-twincat.md`
+7. `piano-test-twincat-fase-1.md`
+8. `comando-robot-da-target.md`
+9. `src/Robot/README.md`
 
 Per confrontarsi con Claude o riprendere il lavoro:
 
@@ -48,6 +50,8 @@ Per confrontarsi con Claude o riprendere il lavoro:
 | `fase-1-specifica-implementazione.md` | Durante implementazione | POU, dati, algoritmi e test Fase 1 |
 | `protocollo-robot-provvisorio.md` | Quando si parla col robot | Formato `@...#` dedotto e protocollo consigliato |
 | `comando-robot-da-target.md` | Prima di implementare invio robot | Mappa campi numerici e stringa opzionale da target PLC a comando robot |
+| `lavoro-offline-senza-twincat.md` | Quando non abbiamo TwinCAT/macchina | Cosa si puo' fare solo lavorando sulle cartelle |
+| `specifica-pickmaster-driver.md` | Prima di scrivere driver reale | Specifica stati/variabili per futuro `Robot_PickMasterDriver` |
 | `scaffold-st-note-integrazione.md` | Prima dell'import TwinCAT | Come importare/testare lo scaffold senza rompere l'esistente |
 | `verifica-statica-scaffold.md` | Prima della compilazione | Controlli fatti e rischi residui TwinCAT |
 | `checklist-prima-compilazione.md` | Durante primo compile | Errori probabili TwinCAT e correzioni rapide |

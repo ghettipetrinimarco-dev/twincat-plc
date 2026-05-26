@@ -165,6 +165,7 @@ Usare:
 ```text
 robot/gestionerobot.txt
 docs/robot/analisi-gestionerobot-pickmaster.md
+docs/robot/specifica-pickmaster-driver.md
 ```
 
 per progettare un nuovo POU:
