@@ -1,173 +1,194 @@
+(*
+    PROGRAM Gestione_Robot  — v2.0
+    ================================
+    Legge OBJ_queue[] (prodotta da FB_Segmentazione via Sensore_NIR),
+    costruisce una stringa di pick per ogni oggetto e la invia via TCP
+    direttamente al controller robot.
+
+    NON usa più PickMaster. Connessione singola TCP a IP_ROBOT:PORT_ROBOT.
+
+    Formato stringa inviata:
+        @UiTag,X_mm,Y_mm,Z_mm,Rotazione,AttesaPresa,X_box,Y_box,Z_box,AttesaDeposito,#
+    Esempio:
+        @42,287.5,1834.6,200.0,0.0,0.5,320.0,340.0,50.0,0.3,#
+
+    Macchina a stati:
+        0  CONNESSIONE       — apre socket TCP verso robot
+        1  RUNNING           — attende oggetti in OBJ_queue
+        2  INVIA             — costruisce stringa e la spedisce
+        3  CHIUDI_RICONNETTI — errore: chiude socket, aspetta, riprova
+       99  IDLE              — disabilitato (ABIL_ROBOT = FALSE)
+*)
 PROGRAM Gestione_Robot
 VAR CONSTANT
-	CONNESSIONE_PICKMASTER: INT:= 0;
-	AVVIO_PROGETTO:INT := 1;
-	CONNESSIONE_USERHOOK:INT:= 2;
-	RUNNING: INT := 3;
-	CHIUDI_USERHOOK: INT := 4;
-	ARRESTA_PROGETTO: INT := 5;
-	CHIUDI_PICKMASTER:INT := 6;
-
-	PICKMASTER_TIMEOUT: TIME:= T#10s;
-
-	CMD_AVVIA_PROGETTO: ARRAY [0..1] OF BYTE:=16#0,16#13;
-	CMD_ARRESTA_PROGETTO: ARRAY [0..1] OF BYTE:=16#0,16#14;
-
+    CONNESSIONE         : INT := 0;
+    RUNNING             : INT := 1;
+    INVIA               : INT := 2;
+    CHIUDI_RICONNETTI   : INT := 3;
+    ROBOT_TIMEOUT       : TIME := T#5S;
+    RITARDO_RICONNESSIONE : TIME := T#3S;
 END_VAR
 VAR
-	PE_Trig:R_TRIG;
-	(*Pickmaster SOCKET*)
-	FB_Connessione_Pickmaster: FB_SocketConnect;
-	hSocket_Pickmaster: T_HSOCKET;
-	FB_Spedisci_Pickmaster: FB_SocketSend;
-	FB_Ricevi_Pickmaster: FB_SocketReceive;
-	FB_Chiudi_Pickmaster: FB_SocketClose;
+    (* Socket TCP verso robot *)
+    FB_Connetti         : FB_SocketConnect;
+    hSocket             : T_HSOCKET;
+    FB_Spedisci         : FB_SocketSend;
+    FB_Chiudi           : FB_SocketClose;
 
-	(*Userhook SOCKET*)
-	FB_Connessione_Userhook: FB_SocketConnect;
-	hSocket_Userhook: T_HSOCKET;
-	FB_Spedisci_Userhook: FB_SocketSend;
-	FB_Ricevi_Userhook: FB_SocketReceive;
-	FB_Chiudi_Userhook: FB_SocketClose;
-	Aux_ricevi:BOOL;
-	Stato: INT:= 0;
-	send_data:BOOL;
+    Stato               : INT := 99;
+    fronte_abil         : R_TRIG;
+    fronte_disabil      : F_TRIG;
+    ritardo_riconn      : TON;
+
+    (* Oggetto corrente da inviare *)
+    obj_corrente        : OBJ_PICK;
+    String_Pick         : STRING(255);  (* stringa formattata per il robot *)
+    len_stringa         : UDINT;
+    Y_mm                : REAL;         (* posizione Y convertita in mm *)
+
+    (* Diagnostica *)
+    n_pick_inviati      : UDINT;        (* totale pick inviati con successo *)
+    n_errori_tcp        : UDINT;        (* totale errori di connessione/invio *)
+    ultimo_errore_id    : UDINT;        (* nErrId dell'ultimo errore *)
+    max_time_task       : UDINT;
+    count_exceed        : UDINT;
 END_VAR
 
+
+(* --- Abilitazione / disabilitazione --- *)
+fronte_abil(CLK:=ABIL_ROBOT , Q=> );
+fronte_disabil(CLK:=ABIL_ROBOT , Q=> );
+IF fronte_abil.Q AND Stato = 99 THEN Stato := CONNESSIONE; END_IF
+IF fronte_disabil.Q AND Stato <> 99 THEN Stato := CHIUDI_RICONNETTI; END_IF
 
 CASE Stato OF
 
-(*Connessione Pickmaster*)
+(* ================================================================
+   0 — CONNESSIONE: apre socket TCP verso controller robot
+   ================================================================ *)
 0:
-FB_Connessione_Pickmaster(
-	sSrvNetId:= '',
-	sRemoteHost :=IP_PICKMASTER ,
-	nRemotePort:= PORT_PICKMASTER,
-	bExecute:= TRUE,
-	tTimeout:=PICKMASTER_TIMEOUT ,
-	bBusy=> ,
-	bError=> ,
-	nErrId=> ,
-	hSocket=>hSocket_Pickmaster);
-FB_Connessione_Pickmaster(bExecute:= FALSE,);
-IF NOT FB_Connessione_Pickmaster.bBusy AND NOT FB_Connessione_Pickmaster.bError AND hSocket_Pickmaster.handle <> 0 THEN
-	Stato:= AVVIO_PROGETTO;
-ELSE
-	Stato := CHIUDI_PICKMASTER;
+FB_Connetti(
+    sSrvNetId   := '',
+    sRemoteHost := IP_ROBOT,
+    nRemotePort := PORT_ROBOT,
+    bExecute    := TRUE,
+    tTimeout    := ROBOT_TIMEOUT,
+    bBusy       => ,
+    bError      => ,
+    nErrId      => ,
+    hSocket     => hSocket);
+FB_Connetti(bExecute:= FALSE);
+IF NOT FB_Connetti.bBusy THEN
+    IF NOT FB_Connetti.bError AND hSocket.handle <> 0 THEN
+        Stato := RUNNING;
+    ELSE
+        ultimo_errore_id := FB_Connetti.nErrId;
+        n_errori_tcp := n_errori_tcp + 1;
+        Stato := CHIUDI_RICONNETTI;
+    END_IF
 END_IF
 
-(*Spedisci AVVIO PROGETTO*)
+(* ================================================================
+   1 — RUNNING: controlla OBJ_queue, se c'è un oggetto → INVIA
+   ================================================================ *)
 1:
-FB_Spedisci_Pickmaster(
-	sSrvNetId:= '',
-	hSocket:= hSocket_Pickmaster ,
-	cbLen:=SIZEOF(CMD_AVVIA_PROGETTO) ,
-	pSrc:= ADR(CMD_AVVIA_PROGETTO),
-	bExecute:= TRUE,
-	tTimeout:=PICKMASTER_TIMEOUT ,
-	bBusy=> ,
-	bError=> ,
-	nErrId=> );
-FB_Spedisci_Pickmaster(bExecute:= FALSE,);
-IF NOT FB_Spedisci_Pickmaster.bBusy AND NOT FB_Spedisci_Pickmaster.bError THEN
-	Stato := CONNESSIONE_USERHOOK;
-ELSE
-	stato := CHIUDI_PICKMASTER;
+IF obj_tail <> obj_head THEN
+    (* Leggi prossimo oggetto dalla coda circolare *)
+    IF OBJ_queue[obj_tail].valido AND NOT OBJ_queue[obj_tail].inviato THEN
+        obj_corrente := OBJ_queue[obj_tail];
+        Stato := INVIA;
+    ELSE
+        (* Slot non valido o già inviato — avanza comunque *)
+        obj_tail := obj_tail + 1;
+        IF obj_tail > MAX_OBJ_QUEUE THEN obj_tail := 0; END_IF
+    END_IF
 END_IF
 
-(*Connessione UserHook*)
+(* ================================================================
+   2 — INVIA: costruisce stringa pick e la spedisce via TCP
+   ================================================================ *)
 2:
-FB_Connessione_Userhook(
-	sSrvNetId:= '',
-	sRemoteHost:=IP_USERHOOK ,
-	nRemotePort:= PORT_USERHOOK,
-	bExecute:= TRUE,
-	tTimeout:=PICKMASTER_TIMEOUT ,
-	bBusy=> ,
-	bError=> ,
-	hSocket=>hSocket_Userhook);
-FB_Connessione_Userhook(bExecute:= FALSE,);
-IF NOT FB_Connessione_Userhook.bBusy AND NOT FB_Connessione_Userhook.bError AND hSocket_Userhook.handle <> 0 THEN
-	Stato:= RUNNING;
-	send_data:=FALSE;
-ELSE
-	Stato := CHIUDI_USERHOOK;
+(* Converti posizione encoder → mm fisici
+   Y_mm = (encoder_start / IMPULSI_ENCODER) * SVILUPPO_ESTERNO + DISTANZA_ROBOT_MM
+   DISTANZA_ROBOT_MM = distanza fisica NIR → punto di presa del robot (misurare!) *)
+Y_mm := UDINT_TO_REAL(obj_corrente.Y) / UDINT_TO_REAL(IMPULSI_ENCODER)
+        * SVILUPPO_ESTERNO
+        + DISTANZA_ROBOT_MM;
+
+(* Costruisci stringa:  @UiTag,X,Y,Z,Rot,AttPresa,Xbox,Ybox,Zbox,AttDeposito,# *)
+String_Pick := CONCAT('@'          , INT_TO_STRING(UiTag_robot));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(obj_corrente.X)));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(Y_mm)));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(ALTEZZA)));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(GRADI_ROTAZIONE)));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(ATTESA_PRESA)));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(X_BOX[obj_corrente.indice_box])));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(Y_BOX[obj_corrente.indice_box])));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(Z_BOX[obj_corrente.indice_box])));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(ATTESA_DEPOSITO)));
+String_Pick := CONCAT(String_Pick  , ',#');
+
+len_stringa := INT_TO_UDINT(LEN(String_Pick));
+
+FB_Spedisci(
+    sSrvNetId   := '',
+    hSocket     := hSocket,
+    cbLen       := len_stringa,
+    pSrc        := ADR(String_Pick),
+    bExecute    := TRUE,
+    tTimeout    := ROBOT_TIMEOUT,
+    bBusy       => ,
+    bError      => ,
+    nErrId      => );
+FB_Spedisci(bExecute:= FALSE);
+
+IF NOT FB_Spedisci.bBusy THEN
+    IF NOT FB_Spedisci.bError THEN
+        (* Invio riuscito *)
+        UiTag_robot := UiTag_robot + 1;
+        n_pick_inviati := n_pick_inviati + 1;
+        OBJ_queue[obj_tail].inviato := TRUE;
+        obj_tail := obj_tail + 1;
+        IF obj_tail > MAX_OBJ_QUEUE THEN obj_tail := 0; END_IF
+        Stato := RUNNING;
+    ELSE
+        (* Errore invio → riconnetti *)
+        ultimo_errore_id := FB_Spedisci.nErrId;
+        n_errori_tcp := n_errori_tcp + 1;
+        Stato := CHIUDI_RICONNETTI;
+    END_IF
 END_IF
 
-(* RUNNING: quando Trig sale manda String_ToSend via UserHook *)
+(* ================================================================
+   3 — CHIUDI_RICONNETTI: chiude socket, attende, torna a CONNESSIONE
+   ================================================================ *)
 3:
-PE_Trig.CLK:=Trig;
-PE_Trig();
-IF PE_Trig.Q THEN send_data:=TRUE; END_IF
-IF send_data THEN
-	FB_Spedisci_Userhook(
-		sSrvNetId:= '',
-		hSocket:= hSocket_Userhook ,
-		cbLen:=SIZEOF(String_ToSend) ,
-		pSrc:= ADR(String_ToSend),
-		bExecute:= TRUE,
-		tTimeout:=PICKMASTER_TIMEOUT ,
-		bBusy=> ,
-		bError=> ,
-		nErrId=> );
-	FB_Spedisci_Userhook(bExecute:= FALSE,);
-	IF NOT FB_Spedisci_Userhook.bBusy AND NOT FB_Spedisci_Userhook.bError THEN
-		send_data:=FALSE;
-	END_IF
+FB_Chiudi(
+    sSrvNetId   := '',
+    hSocket     := hSocket,
+    bExecute    := TRUE,
+    tTimeout    := DEFAULT_ADS_TIMEOUT,
+    bBusy       => ,
+    bError      => ,
+    nErrId      => );
+IF NOT FB_Chiudi.bBusy THEN
+    FB_Chiudi(bExecute:= FALSE);
+    MEMSET(ADR(hSocket), 0, SIZEOF(hSocket));
+    ritardo_riconn(IN:=FALSE);   (* reset timer *)
 END_IF
 
-4:(*Chiusura Userhook*)
-FB_Ricevi_Userhook(bExecute:= FALSE);
-Aux_ricevi:=FALSE;
-FB_Chiudi_Userhook(
-	sSrvNetId:='' ,
-	hSocket :=hSocket_Userhook,
-	bExecute:= TRUE,
-	tTimeout:=DEFAULT_ADS_TIMEOUT ,
-	bBusy=> ,
-	bError=> ,
-	nErrId=> );
-IF NOT FB_Chiudi_Userhook.bBusy THEN
-	IF NOT FB_Chiudi_Userhook.bError THEN
-		FB_Chiudi_Userhook(bExecute:= FALSE,);
-		MEMSET( ADR(hSocket_Userhook), 0, SIZEOF(hSocket_Userhook));
-		Stato:=ARRESTA_PROGETTO;
-	END_IF
+ritardo_riconn(IN:=(hSocket.handle = 0), PT:=RITARDO_RICONNESSIONE);
+IF ritardo_riconn.Q AND ABIL_ROBOT THEN
+    Stato := CONNESSIONE;
 END_IF
-
-(*Spedisci ARRESTA PROGETTO*)
-5:
-FB_Spedisci_Pickmaster(
-	sSrvNetId:= '',
-	hSocket:= hSocket_Pickmaster ,
-	cbLen:=SIZEOF(CMD_ARRESTA_PROGETTO) ,
-	pSrc:= ADR(CMD_ARRESTA_PROGETTO),
-	bExecute:= TRUE,
-	tTimeout:=PICKMASTER_TIMEOUT ,
-	bBusy=> ,
-	bError=> ,
-	nErrId=> );
-FB_Spedisci_Pickmaster(bExecute:= FALSE,);
-stato := CHIUDI_PICKMASTER;
-
-(* Chiusura Pickmaster *)
-6:
-FB_Ricevi_Pickmaster(bExecute:= FALSE);
-Aux_ricevi:=FALSE;
-FB_Chiudi_Pickmaster(
-	sSrvNetId:='' ,
-	hSocket:= hSocket_Pickmaster,
-	bExecute:= TRUE,
-	tTimeout:=DEFAULT_ADS_TIMEOUT ,
-	bBusy=> ,
-	bError=> ,
-	nErrId=> );
-IF NOT FB_Chiudi_Pickmaster.bBusy THEN
-	IF NOT FB_Chiudi_Pickmaster.bError THEN
-		FB_Chiudi_Pickmaster(bExecute:= FALSE,);
-		MEMSET( ADR(hSocket_Pickmaster), 0, SIZEOF(hSocket_Pickmaster));
-		Stato:=99;
-	END_IF
-END_IF
+IF NOT ABIL_ROBOT THEN Stato := 99; END_IF
 
 END_CASE
+
+(* Diagnostica task *)
+IF SystemTaskInfoArr[3].lastExecTime > max_time_task THEN
+    max_time_task := SystemTaskInfoArr[3].lastExecTime;
+END_IF
+IF SystemTaskInfoArr[3].cycleTimeExceeded THEN
+    count_exceed := count_exceed + 1;
+END_IF

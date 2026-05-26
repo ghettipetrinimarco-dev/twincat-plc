@@ -57,4 +57,17 @@ VAR_GLOBAL
     (* Contatore tag pick (progressivo, inviato nel campo UiTag) *)
     UiTag_robot         : INT := 0;
 
+    (* ============================================================
+       ABILITAZIONE ROBOT
+       ============================================================ *)
+    ABIL_ROBOT          : BOOL := FALSE;    (* TRUE = Gestione_Robot attivo *)
+
+    (* ============================================================
+       DISTANZA NIR → PUNTO DI PRESA (da misurare sul prototipo)
+       Distanza fisica in mm tra il sensore NIR e il punto centrale
+       dove il robot afferra l'oggetto.
+       Usata per correggere la posizione Y prima di inviarla al robot.
+       ============================================================ *)
+    DISTANZA_ROBOT_MM   : REAL := 0.0;     (* mm — DA MISURARE sul prototipo *)
+
 END_VAR
