@@ -94,23 +94,7 @@ ROBOT_SIMULATION := TRUE
 
 ## Punti da verificare in TwinCAT
 
-### 1. Array con costanti globali
-
-La bozza usa costanti globali:
-
-```st
-ROBOT_TARGETS : ARRAY [0..ROBOT_MAX_TARGETS] OF ROBOT_TARGET;
-X_BOX : ARRAY [0..ROBOT_MAX_BOXES] OF REAL;
-```
-
-Se TwinCAT 2 non accetta costanti globali come limite array nella GVL, sostituire con valori letterali:
-
-```st
-ROBOT_TARGETS : ARRAY [0..49] OF ROBOT_TARGET;
-X_BOX : ARRAY [0..20] OF REAL;
-```
-
-### 2. Tipi e conversioni UINT/INT
+### 1. Tipi e conversioni UINT/INT
 
 `INDEX_NIR` e' `UINT`, `BUFFER_SIZE` e' `INT`.
 
@@ -121,6 +105,17 @@ scan_index := BUFFER_SIZE;
 ```
 
 con conversione esplicita accettata da TwinCAT 2.
+
+### 2. Array robot
+
+Per ridurre il rischio di incompatibilita' TwinCAT 2, gli array principali nello scaffold usano limiti letterali:
+
+```st
+ROBOT_TARGETS : ARRAY [0..49] OF ROBOT_TARGET;
+X_BOX : ARRAY [0..20] OF REAL;
+Y_BOX : ARRAY [0..20] OF REAL;
+Z_BOX : ARRAY [0..20] OF REAL;
+```
 
 ## Scelte fatte nello scaffold
 

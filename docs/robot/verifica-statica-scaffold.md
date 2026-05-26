@@ -1,0 +1,187 @@
+# Verifica statica scaffold robot
+
+Aggiornato: 2026-05-26
+
+## Scopo
+
+Ridurre il rischio del primo import in TwinCAT 2 controllando lo scaffold robot con gli strumenti disponibili nel repo.
+
+Questa non e' una compilazione TwinCAT.
+
+## Verifiche fatte
+
+### Stato repository
+
+Branch:
+
+```text
+session/2026-05-16_15-21
+```
+
+Prima della verifica il repo era pulito.
+
+### File scaffold presenti
+
+```text
+src/Robot/GESTIONE_ROBOT.EXP
+src/Robot/README.md
+src/Robot/ROBOT_GLOBALS.EXP
+src/Robot/ROBOT_OBJECT_BUILDER.EXP
+src/Robot/ROBOT_QUEUE.EXP
+src/Robot/ROBOT_STATE.EXP
+src/Robot/ROBOT_TARGET.EXP
+src/Robot/ROBOT_TEST_INPUT.EXP
+```
+
+### Chiusura POU/TYPE
+
+Controllato che i file principali terminino con:
+
+- `END_PROGRAM` per i PROGRAM
+- `END_TYPE` / `@END_DECLARATION` per i TYPE
+- `@OBJECT_END` per la GVL
+
+### Riferimenti principali
+
+Riferimenti robot usati solo nello scaffold e nei documenti:
+
+- `ROBOT_TARGETS`
+- `ROBOT_STATE_GLOBAL`
+- `ROBOT_CURRENT_TARGET`
+- `ROBOT_TARGET_REQUEST`
+- `ROBOT_SIM_PICK_DONE`
+- `ROBOT_TEST_*`
+- `MATERIALI_ATTIVI_BOX`
+- `X_BOX/Y_BOX/Z_BOX`
+
+Riferimenti al progetto esistente usati dallo scaffold:
+
+- `INDEX_NIR`
+- `BUFFER_SIZE`
+- `MSI_data`
+- `NUM_TRACKS_NIR`
+- `NUM_CODICI`
+- `CODICI_MATERIALI`
+- `MATERIALI_ATTIVI`
+
+Questi esistono nel progetto attuale.
+
+## Correzioni fatte dopo verifica
+
+### Array con limiti letterali
+
+Per ridurre rischi con TwinCAT 2, la GVL robot ora usa limiti letterali:
+
+```st
+ROBOT_TARGETS : ARRAY [0..49] OF ROBOT_TARGET;
+X_BOX : ARRAY [0..20] OF REAL;
+Y_BOX : ARRAY [0..20] OF REAL;
+Z_BOX : ARRAY [0..20] OF REAL;
+```
+
+Le costanti:
+
+```st
+ROBOT_MAX_TARGETS : INT := 49;
+ROBOT_MAX_BOXES : INT := 20;
+```
+
+restano utili nei cicli `FOR`, ma non sono piu' usate come bound di array.
+
+### Lettura ultimo scan NIR
+
+`Robot_ObjectBuilder` non legge direttamente `INDEX_NIR`.
+
+Legge l'ultimo scan completato:
+
+```st
+IF INDEX_NIR = 0 THEN
+    scan_index := BUFFER_SIZE;
+ELSE
+    scan_index := INDEX_NIR - 1;
+END_IF
+```
+
+Motivo:
+
+```text
+Sensore_NIR incrementa INDEX_NIR dopo avere scritto lo scan
+```
+
+## Rischi residui da verificare in TwinCAT
+
+### Conversione `BUFFER_SIZE` -> `UINT`
+
+`scan_index` e' `UINT`, `BUFFER_SIZE` e' `INT`.
+
+Se TwinCAT 2 non accetta:
+
+```st
+scan_index := BUFFER_SIZE;
+```
+
+usare conversione esplicita accettata dal compilatore.
+
+### Conversione `INT_TO_TIME`
+
+`GESTIONE_ROBOT` usa:
+
+```st
+INT_TO_TIME(ROBOT_SIM_PICK_TIME_MS)
+```
+
+Da confermare in TwinCAT 2.
+
+Se non compilasse, alternativa:
+
+- usare parametro `TIME` direttamente
+- oppure una conversione supportata dalla libreria STANDARD disponibile
+
+### Ordine import
+
+Importare prima i TYPE:
+
+```text
+ROBOT_TARGET
+ROBOT_STATE
+```
+
+Poi GVL:
+
+```text
+Robot_Globals
+```
+
+Poi PROGRAM:
+
+```text
+Robot_ObjectBuilder
+Robot_TestInput
+Robot_Queue
+Gestione_Robot
+```
+
+### Ordine esecuzione task
+
+Nella task lenta, ordine consigliato:
+
+```text
+Robot_ObjectBuilder();
+Robot_TestInput();
+Robot_Queue();
+Gestione_Robot();
+```
+
+Nota: se si vuole che il simulatore reagisca nello stesso ciclo al target richiesto, potrebbe servire eseguire `Gestione_Robot()` prima e dopo la queue o introdurre un ciclo di latenza. Per Fase 1 una latenza di un ciclo e' accettabile.
+
+## Stato finale verifica
+
+Lo scaffold e':
+
+```text
+pronto per primo import controllato in TwinCAT
+non collegato ai task nel repo
+non verificato dal compilatore TwinCAT
+non pronto per produzione
+```
+
