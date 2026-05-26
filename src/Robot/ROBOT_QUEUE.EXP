@@ -97,7 +97,24 @@ IF ROBOT_ENABLED THEN
 			END_IF
 
 			IF ROBOT_TARGETS[slot_index].InWindow AND NOT ROBOT_TARGETS[slot_index].Sent AND ROBOT_STATE_GLOBAL.Ready AND NOT target_available THEN
-				ROBOT_CURRENT_TARGET := ROBOT_TARGETS[slot_index];
+				ROBOT_CURRENT_TARGET.Id := ROBOT_TARGETS[slot_index].Id;
+				ROBOT_CURRENT_TARGET.MaterialIndex := ROBOT_TARGETS[slot_index].MaterialIndex;
+				ROBOT_CURRENT_TARGET.MaterialCode := ROBOT_TARGETS[slot_index].MaterialCode;
+				ROBOT_CURRENT_TARGET.BoxIndex := ROBOT_TARGETS[slot_index].BoxIndex;
+				ROBOT_CURRENT_TARGET.FirstTrack := ROBOT_TARGETS[slot_index].FirstTrack;
+				ROBOT_CURRENT_TARGET.LastTrack := ROBOT_TARGETS[slot_index].LastTrack;
+				ROBOT_CURRENT_TARGET.CenterTrack := ROBOT_TARGETS[slot_index].CenterTrack;
+				ROBOT_CURRENT_TARGET.PickX := ROBOT_TARGETS[slot_index].PickX;
+				ROBOT_CURRENT_TARGET.PickY := ROBOT_TARGETS[slot_index].PickY;
+				ROBOT_CURRENT_TARGET.PickZ := ROBOT_TARGETS[slot_index].PickZ;
+				ROBOT_CURRENT_TARGET.PickAngle := ROBOT_TARGETS[slot_index].PickAngle;
+				ROBOT_CURRENT_TARGET.PositionImpulses := ROBOT_TARGETS[slot_index].PositionImpulses;
+				ROBOT_CURRENT_TARGET.Valid := ROBOT_TARGETS[slot_index].Valid;
+				ROBOT_CURRENT_TARGET.InWindow := ROBOT_TARGETS[slot_index].InWindow;
+				ROBOT_CURRENT_TARGET.Sent := TRUE;
+				ROBOT_CURRENT_TARGET.Picked := FALSE;
+				ROBOT_CURRENT_TARGET.Failed := FALSE;
+				ROBOT_CURRENT_TARGET.Missed := FALSE;
 				ROBOT_TARGET_REQUEST := TRUE;
 				ROBOT_TARGETS[slot_index].Sent := TRUE;
 				ROBOT_TARGETS_SENT := ROBOT_TARGETS_SENT + 1;

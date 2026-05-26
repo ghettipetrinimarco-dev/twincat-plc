@@ -3,7 +3,7 @@
 (* @OBJECTFLAGS := '0, 8' *)
 PROGRAM Robot_ObjectBuilder
 VAR
-	scan_index : UINT;
+	scan_index : INT;
 	track_index : INT;
 	code_index : INT;
 	slot_index : INT;

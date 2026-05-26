@@ -224,7 +224,7 @@ Se fallisce:
 Parametri:
 
 ```text
-ROBOT_SIM_PICK_TIME_MS := 500
+ROBOT_SIM_PICK_TIME := T#500MS
 ```
 
 Atteso:
@@ -241,7 +241,7 @@ ROBOT_TARGETS[0].Valid torna FALSE
 Se fallisce:
 
 - verificare `Gestione_Robot()` nella task
-- verificare `INT_TO_TIME(ROBOT_SIM_PICK_TIME_MS)`
+- verificare `ROBOT_SIM_PICK_TIME`
 - se `PickDone` resta TRUE troppo a lungo, valutare reset esplicito nella prossima revisione
 
 ## Test 5 - Missed

@@ -58,11 +58,10 @@ verificare solo compatibilita' tipi, funzioni e riferimenti globali
 | `Unknown type ROBOT_TARGET` | Import ordine sbagliato | Importare `ROBOT_TARGET.EXP` prima della GVL |
 | `Unknown type ROBOT_STATE` | Import ordine sbagliato | Importare `ROBOT_STATE.EXP` prima della GVL |
 | `Unknown identifier ROBOT_*` in `Gestione_Encoder` | GVL robot non importata | Importare `ROBOT_GLOBALS.EXP` prima di `GESTIONE_ENCODER.EXP` modificato |
-| Errore su `scan_index := BUFFER_SIZE` | `scan_index` e' `UINT`, `BUFFER_SIZE` e' `INT` | Cambiare `scan_index` in `INT` oppure usare conversione esplicita accettata |
-| Errore su `INT_TO_TIME(ROBOT_SIM_PICK_TIME_MS)` | Conversione non supportata in TwinCAT 2 | Cambiare `ROBOT_SIM_PICK_TIME_MS` in variabile `TIME` |
+| Errore su `scan_index := INDEX_NIR - 1` | `INDEX_NIR` e' `UINT`, `scan_index` e' `INT` | Usare conversione esplicita o variabile intermedia accettata |
+| Errore su `ROBOT_SIM_PICK_TIME : TIME := T#500MS` | Persistente `TIME` non accettata | Spostare il valore in `VAR_GLOBAL` non persistent o usare literal nel `TON` |
 | Errore su `STRING(255)` | Dimensione stringa non accettata | Ridurre a `STRING(150)` o usare lunghezza default |
 | Errore su `REAL_TO_STRING` | Funzione conversione non disponibile | Usare conversione/libreria gia' disponibile nel progetto |
-| Errore su assegnazione struttura `ROBOT_CURRENT_TARGET := ROBOT_TARGETS[slot_index]` | Copia struttura non accettata | Copiare campo per campo |
 | Errore su `ROBOT_TARGETS[slot_index]` | Indice o limite array non accettato | Verificare `slot_index : INT` e limiti `[0..49]` |
 | Errore su `ROBOT_CURRENT_TARGET.BoxIndex` dentro `X_BOX[...]` | Indice array non accettato | Usare variabile intermedia `command_box_index`, gia' presente |
 

@@ -54,8 +54,10 @@ target -> in_window -> sent -> picked
 
 Correggere eventuali errori su:
 
-- conversione `BUFFER_SIZE` verso `UINT`
-- `INT_TO_TIME`
+- conversione `INDEX_NIR - 1` verso `INT`
+- variabili `TIME` persistent
+- `STRING(255)`
+- conversioni `REAL_TO_STRING`
 - limiti array
 - ordine import TYPE/GVL/PROGRAM
 - nome POU duplicato/non valido
@@ -216,4 +218,3 @@ Solo dopo:
 | Coordinate robot | Statiche, conveyor tracking interno, timestamp/encoder |
 | Gestione duplicati | Filtro semplice o object builder multi-scan |
 | Safety | TwinSAFE, safety controller robot, I/O esterno |
-

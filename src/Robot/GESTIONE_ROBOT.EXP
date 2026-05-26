@@ -63,7 +63,7 @@ ELSE
 			ROBOT_COMMAND_READY := FALSE;
 		END_IF
 
-		pick_timer(IN := timer_active, PT := INT_TO_TIME(ROBOT_SIM_PICK_TIME_MS), Q => , ET => );
+		pick_timer(IN := timer_active, PT := ROBOT_SIM_PICK_TIME, Q => , ET => );
 		IF pick_timer.Q THEN
 			timer_active := FALSE;
 			ROBOT_STATE_GLOBAL.Busy := FALSE;

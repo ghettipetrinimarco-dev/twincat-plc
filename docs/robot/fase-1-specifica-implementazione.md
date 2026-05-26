@@ -194,7 +194,7 @@ per ogni target valido non concluso:
         ROBOT_TARGETS_MISSED++
 
     se robot ready e target in_window e non sent:
-        ROBOT_CURRENT_TARGET := target
+        copia target in ROBOT_CURRENT_TARGET campo per campo
         target.Sent := TRUE
         ROBOT_TARGETS_SENT++
 ```

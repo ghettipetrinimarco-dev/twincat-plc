@@ -174,34 +174,61 @@ Motivo:
 Sensore_NIR incrementa INDEX_NIR dopo avere scritto lo scan
 ```
 
-## Rischi residui da verificare in TwinCAT
+## Rischi ridotti nello scaffold
 
-### Conversione `BUFFER_SIZE` -> `UINT`
+### Tipo `scan_index`
 
-`scan_index` e' `UINT`, `BUFFER_SIZE` e' `INT`.
-
-Se TwinCAT 2 non accetta:
+`scan_index` e `ROBOT_LAST_PROCESSED_NIR_INDEX` sono `INT`.
 
 ```st
 scan_index := BUFFER_SIZE;
 ```
 
-usare conversione esplicita accettata dal compilatore.
+Motivo:
 
-### Conversione `INT_TO_TIME`
+```text
+evitare conversione implicita `BUFFER_SIZE` INT -> `scan_index` UINT
+```
+
+### Timer simulazione
 
 `GESTIONE_ROBOT` usa:
 
 ```st
-INT_TO_TIME(ROBOT_SIM_PICK_TIME_MS)
+ROBOT_SIM_PICK_TIME : TIME := T#500MS
 ```
 
-Da confermare in TwinCAT 2.
+e passa direttamente questo valore al `TON`.
 
-Se non compilasse, alternativa:
+Motivo:
 
-- usare parametro `TIME` direttamente
-- oppure una conversione supportata dalla libreria STANDARD disponibile
+```text
+evitare conversione `INT_TO_TIME` nella prima compilazione
+```
+
+### Copia target corrente
+
+`Robot_Queue` copia `ROBOT_CURRENT_TARGET` campo per campo.
+
+Motivo:
+
+```text
+evitare dipendenza dalla copia struttura completa `ROBOT_CURRENT_TARGET := ROBOT_TARGETS[slot_index]`
+```
+
+## Rischi residui da verificare in TwinCAT
+
+### Conversione `INDEX_NIR - 1`
+
+`INDEX_NIR` e' `UINT`, `scan_index` e' `INT`.
+
+Se TwinCAT 2 non accetta:
+
+```st
+scan_index := INDEX_NIR - 1;
+```
+
+usare conversione esplicita accettata dal compilatore o una variabile intermedia.
 
 ### Ordine import
 
