@@ -44,7 +44,8 @@ VAR
 
     (* --- Statistiche robot --- *)
     pick_confermati_parz : INT;     (* snapshot UiTag_robot all'inizio del minuto *)
-    obj_rilevati_parz   : UDINT;    (* oggetti rilevati nell'ultimo minuto *)
+    campionati_prev      : UDINT;   (* snapshot Totale_campionato all'inizio del minuto *)
+    obj_rilevati_parz   : UDINT;    (* oggetti rilevati nell'ultimo minuto (delta) *)
     coda_slot_occupati  : INT;
 
     (* --- Allarmi --- *)
@@ -90,12 +91,23 @@ fronte_timer_min(CLK:=in_timer_min, Q=>);
 IF fronte_timer_min.Q THEN
     TEMPO_ORA := TEMPO_ORA + 1;
 
-    (* Pick confermati al minuto — UiTag_robot è il contatore globale pick inviati *)
+    (* Pick confermati al minuto — delta UiTag_robot nell'ultimo minuto *)
     PICK_AL_MINUTO := UiTag_robot - pick_confermati_parz;
-    IF PICK_AL_MINUTO < 0 THEN PICK_AL_MINUTO := 0; END_IF  (* protezione wrap INT *)
+    IF PICK_AL_MINUTO < 0 THEN
+        (* Gestione wrap: UiTag_robot è stato resettato a 0 durante il minuto *)
+        PICK_AL_MINUTO := UiTag_robot;
+    END_IF
     pick_confermati_parz := UiTag_robot;
 
-    (* Efficienza: pick / oggetti rilevati *)
+    (* Oggetti rilevati al minuto — delta Totale_campionato nell'ultimo minuto *)
+    IF Totale_campionato >= campionati_prev THEN
+        obj_rilevati_parz := Totale_campionato - campionati_prev;
+    ELSE
+        obj_rilevati_parz := Totale_campionato;  (* wrap UDINT — improbabile *)
+    END_IF
+    campionati_prev := Totale_campionato;
+
+    (* Efficienza: pick / oggetti rilevati — entrambi delta dell'ultimo minuto *)
     IF obj_rilevati_parz > 0 THEN
         EFFICIENZA_PICK := INT_TO_REAL(PICK_AL_MINUTO) * 100.0
                            / UDINT_TO_REAL(obj_rilevati_parz);
@@ -103,7 +115,6 @@ IF fronte_timer_min.Q THEN
     ELSE
         EFFICIENZA_PICK := 0.0;
     END_IF
-    obj_rilevati_parz := 0;
 END_IF
 
 (* ================================================================
@@ -141,9 +152,6 @@ FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
         PERC_CAMPIONATI[i] := 0.0;
     END_IF
 END_FOR
-
-(* Conteggio oggetti rilevati al minuto *)
-obj_rilevati_parz := Totale_campionato;
 
 (* ================================================================
    Percentuali materiali campionati — parziale

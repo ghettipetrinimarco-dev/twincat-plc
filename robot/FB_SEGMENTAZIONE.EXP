@@ -167,9 +167,20 @@ FOR t := 0 TO 5 DO
                                                   blob_trackers[t].track_max) / 2.0;
                 new_obj.Y          := blob_trackers[t].encoder_start;
                 new_obj.materiale  := dom_mat;
-                new_obj.indice_box := MATERIALI_ATTIVI_BOX[dom_mat];
+                (* Bounds check indice_box: MATERIALI_ATTIVI_BOX può essere 0..N_BOX-1 *)
+                IF MATERIALI_ATTIVI_BOX[dom_mat] >= 0 AND
+                   MATERIALI_ATTIVI_BOX[dom_mat] < N_BOX THEN
+                    new_obj.indice_box := MATERIALI_ATTIVI_BOX[dom_mat];
+                ELSE
+                    new_obj.indice_box := 0;  (* box 0 come fallback sicuro *)
+                END_IF
                 new_obj.valido     := TRUE;
                 new_obj.inviato    := FALSE;
+
+                (* --- Aggiorna contatore oggetti campionati --- *)
+                IF dom_mat >= 0 AND dom_mat <= 100 THEN
+                    NUM_CAMPIONATI[dom_mat] := NUM_CAMPIONATI[dom_mat] + 1;
+                END_IF
 
                 (* --- Inserisci in coda circolare se non piena --- *)
                 next_head := obj_head + 1;

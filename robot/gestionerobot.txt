@@ -149,6 +149,11 @@ Y_mm := UDINT_TO_REAL(obj_corrente.Y)
         + DISTANZA_ROBOT_MM
         + (SPEED * TEMPO_CICLO_ROBOT * 1000.0);  (* compensazione conveyor *)
 
+(* Bounds check indice_box — FB_Segmentazione lo valida già, doppia protezione *)
+IF obj_corrente.indice_box < 0 OR obj_corrente.indice_box >= N_BOX THEN
+    obj_corrente.indice_box := 0;
+END_IF
+
 (* Costruisci stringa:  @UiTag,X,Y,Z,Rot,AttPresa,Xbox,Ybox,Zbox,AttDeposito,# *)
 String_Pick := CONCAT('@'          , INT_TO_STRING(UiTag_robot));
 String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(obj_corrente.X)));
@@ -179,11 +184,21 @@ FB_Spedisci(bExecute:= FALSE);
 IF NOT FB_Spedisci.bBusy THEN
     IF NOT FB_Spedisci.bError THEN
         (* Invio OK — avanza coda e aspetta ACK *)
-        UiTag_robot := UiTag_robot + 1;
         n_pick_inviati := n_pick_inviati + 1;
         OBJ_queue[obj_tail].inviato := TRUE;
+
+        (* Aggiorna contatore selezionati per questo materiale *)
+        IF obj_corrente.materiale >= 0 AND obj_corrente.materiale <= 100 THEN
+            NUM_SELEZIONATI[obj_corrente.materiale] :=
+                NUM_SELEZIONATI[obj_corrente.materiale] + 1;
+        END_IF
+
+        (* Avanza tail e UiTag — gestione wrap INT (max 32767) *)
         obj_tail := obj_tail + 1;
         IF obj_tail > MAX_OBJ_QUEUE THEN obj_tail := 0; END_IF
+        UiTag_robot := UiTag_robot + 1;
+        IF UiTag_robot >= 30000 THEN UiTag_robot := 0; END_IF  (* reset prima dell'overflow *)
+
         MEMSET(ADR(ack_buffer), 0, SIZEOF(ack_buffer));
         timer_ack(IN:=FALSE);  (* reset timer *)
         Stato := ATTESA_ACK;

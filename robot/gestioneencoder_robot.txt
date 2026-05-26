@@ -37,35 +37,32 @@ END_VAR
    ============================================================ *)
 ENCODER_COUNTER := Counter;
 
-IF NOT ENABLE THEN
+(* ============================================================
+   Calcolo velocità nastro
+   ENABLE rimosso — il progetto robot non ha sistema licenza
+   ============================================================ *)
+IF Period > 0 THEN
+    SPEED_calc := (SVILUPPO_ESTERNO / IMPULSI_ENCODER * 10000) / Period;
+END_IF
+IF SPEED_calc < 0.1 THEN SPEED := 0; ELSE SPEED := SPEED_calc; END_IF
 
-    (* ============================================================
-       Calcolo velocità nastro
-       ============================================================ *)
-    IF Period > 0 THEN
-        SPEED_calc := (SVILUPPO_ESTERNO / IMPULSI_ENCODER * 10000) / Period;
+(* ============================================================
+   Calcolo PASSO_ENCODER (usato da altri moduli per conversione)
+   ============================================================ *)
+IF partial > Counter AND SPEED > 0.1 AND Counter <> 0 THEN
+    incremento := incremento + 1;
+END_IF
+IF SPEED < 0.1 OR NOT NIR_ATTIVO THEN
+    partial := Counter;
+END_IF
+IF (Counter > partial OR partial > (Counter + MAX_COUNTER / 2))
+    AND ENCODER_OK AND NIR_ATTIVO THEN
+    IF partial > (Counter + MAX_COUNTER / 2) THEN
+        PASSO_ENCODER := (MAX_COUNTER - partial) + Counter + 1;
+    ELSE
+        PASSO_ENCODER := Counter - partial;
     END_IF
-    IF SPEED_calc < 0.1 THEN SPEED := 0; ELSE SPEED := SPEED_calc; END_IF
-
-    (* ============================================================
-       Calcolo PASSO_ENCODER (usato da altri moduli per conversione)
-       ============================================================ *)
-    IF partial > Counter AND SPEED > 0.1 AND Counter <> 0 THEN
-        incremento := incremento + 1;
-    END_IF
-    IF SPEED < 0.1 OR (NOT NIR_ATTIVO AND NOT FALSE) THEN
-        partial := Counter;
-    END_IF
-    IF (Counter > partial OR partial > (Counter + MAX_COUNTER / 2))
-        AND ENCODER_OK AND NIR_ATTIVO THEN
-        IF partial > (Counter + MAX_COUNTER / 2) THEN
-            PASSO_ENCODER := (MAX_COUNTER - partial) + Counter + 1;
-        ELSE
-            PASSO_ENCODER := Counter - partial;
-        END_IF
-        partial := Counter;
-    END_IF
-
+    partial := Counter;
 END_IF
 
 (* ============================================================
