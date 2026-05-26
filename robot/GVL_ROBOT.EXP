@@ -1,73 +1,83 @@
 (*
-    GVL_ROBOT — Variabili globali aggiuntive per progetto robot.
+    GVL_ROBOT — Variabili globali progetto robot.
     Da aggiungere al GVL esistente della macchina (Global_Variables).
 
     NOTA: I valori numerici (SCAN_DISTANCE, ALTEZZA, ecc.) sono PLACEHOLDER.
     Vanno misurati sul prototipo fisico prima del primo test.
 *)
+
+(* ============================================================
+   COSTANTI — devono stare in VAR_GLOBAL CONSTANT per poter
+   essere usate nelle dichiarazioni di array (TC2 requirement)
+   ============================================================ *)
+VAR_GLOBAL CONSTANT
+    MAX_BLOBS           : INT  := 6;    (* tracker blob simultanei max *)
+    MAX_OBJ_QUEUE       : INT  := 16;   (* slot coda pick (circolare) *)
+    N_BOX               : INT  := 8;    (* numero box di deposito *)
+END_VAR
+
 VAR_GLOBAL
+
+    (* ============================================================
+       ENCODER CONDIVISO
+       Variabile HW mappata in Gestione_Encoder E letta da Sensore_NIR.
+       In TC2 una sola VAR può avere AT %I* — la si copia nel GVL
+       ogni ciclo task Input_Output.
+       ============================================================ *)
+    ENCODER_COUNTER     : UDINT;        (* copia del Counter HW — aggiornata da Gestione_Encoder *)
 
     (* ============================================================
        PARAMETRI GEOMETRICI (da misurare sul prototipo)
        ============================================================ *)
-    SCAN_DISTANCE       : REAL := 3.5;      (* mm tra una scan NIR e la successiva — MISURARE *)
-    DISTANCE_OFFSET     : REAL := 0.0;      (* offset posizione Y iniziale mm *)
-    ALTEZZA             : REAL := 200.0;    (* quota Z di presa mm — MISURARE *)
-    GRADI_ROTAZIONE     : REAL := 0.0;      (* orientamento pinza gradi *)
-    ATTESA_PRESA        : REAL := 0.5;      (* tempo attesa dopo discesa secondi *)
-    ATTESA_DEPOSITO     : REAL := 0.3;      (* tempo attesa al deposito secondi *)
+    SCAN_DISTANCE       : REAL := 3.5;   (* mm/scan — calcolare: vel_nastro_mm_s / linee_nir_s *)
+    ALTEZZA             : REAL := 200.0; (* quota Z presa mm — MISURARE *)
+    GRADI_ROTAZIONE     : REAL := 0.0;   (* orientamento pinza gradi *)
+    ATTESA_PRESA        : REAL := 0.5;   (* s attesa dopo discesa *)
+    ATTESA_DEPOSITO     : REAL := 0.3;   (* s attesa al deposito *)
+    DISTANZA_ROBOT_MM   : REAL := 0.0;   (* mm NIR→punto presa — MISURARE *)
+    TEMPO_CICLO_ROBOT   : REAL := 1.0;   (* s ciclo pick stimato — calibrare *)
 
     (* ============================================================
-       BOX DI DEPOSITO (da configurare per ogni installazione)
-       Indice 0..7: fino a 8 box di destinazione
+       BOX DI DEPOSITO
+       Indice 0..N_BOX-1: fino a 8 box di destinazione
        ============================================================ *)
-    X_BOX               : ARRAY[0..7] OF REAL; (* coordinate X deposito mm *)
-    Y_BOX               : ARRAY[0..7] OF REAL; (* coordinate Y deposito mm *)
-    Z_BOX               : ARRAY[0..7] OF REAL; (* coordinate Z deposito mm *)
+    X_BOX               : ARRAY[0..7] OF REAL;
+    Y_BOX               : ARRAY[0..7] OF REAL;
+    Z_BOX               : ARRAY[0..7] OF REAL;
 
-    (* quale box usare per ogni materiale (indice in X/Y/Z_BOX) *)
+    (* quale box usare per ogni materiale (indice 0..N_BOX-1) *)
     MATERIALI_ATTIVI_BOX : ARRAY[0..15] OF INT;
 
     (* ============================================================
-       CODA PICK — oggetti completati in attesa di invio al robot
+       PARAMETRI SEGMENTAZIONE (calibrabili online)
        ============================================================ *)
-    OBJ_queue           : ARRAY[0..16] OF OBJ_PICK; (* 16 slot circolari *)
-    obj_head            : INT := 0; (* prossima scrittura *)
-    obj_tail            : INT := 0; (* prossima lettura *)
+    OBJ_TRACK_TOLERANCE : INT   := 3;   (* tracce tolleranza laterale per linking blob *)
+    OBJ_GAP_ENCODER     : UDINT := 50;  (* impulsi encoder gap = fine oggetto (~131mm) *)
 
     (* ============================================================
-       TRACKER BLOB — stato interno segmentazione
+       CODA PICK — oggetti completati in attesa di invio al robot
+       Coda circolare: head=scrittura, tail=lettura
+       ============================================================ *)
+    OBJ_queue           : ARRAY[0..16] OF OBJ_PICK;
+    obj_head            : INT := 0;
+    obj_tail            : INT := 0;
+
+    (* ============================================================
+       TRACKER BLOB — stato interno FB_Segmentazione
        ============================================================ *)
     blob_trackers       : ARRAY[0..5] OF BLOB_TRACKER;
 
     (* ============================================================
-       COSTANTI SEGMENTAZIONE
+       COMUNICAZIONE ROBOT
        ============================================================ *)
-    OBJ_TRACK_TOLERANCE : INT  := 3;   (* tracce di tolleranza laterale *)
-    OBJ_GAP_ENCODER     : UDINT := 50; (* impulsi encoder = fine oggetto (~131mm) *)
-    MAX_OBJ_QUEUE       : INT  := 16;
-    MAX_BLOBS           : INT  := 6;
+    IP_ROBOT            : STRING := '192.168.1.100'; (* DA CONFIGURARE *)
+    PORT_ROBOT          : UINT   := 10000;           (* DA CONFIGURARE *)
+    ABIL_ROBOT          : BOOL   := FALSE;
 
     (* ============================================================
-       COMUNICAZIONE ROBOT (IP da configurare)
+       DIAGNOSTICA ROBOT
        ============================================================ *)
-    IP_ROBOT            : STRING := '192.168.1.100'; (* IP controller robot — DA CONFIGURARE *)
-    PORT_ROBOT          : UINT   := 10000;           (* porta TCP robot — DA CONFIGURARE *)
-
-    (* Contatore tag pick (progressivo, inviato nel campo UiTag) *)
-    UiTag_robot         : INT := 0;
-
-    (* ============================================================
-       ABILITAZIONE ROBOT
-       ============================================================ *)
-    ABIL_ROBOT          : BOOL := FALSE;    (* TRUE = Gestione_Robot attivo *)
-
-    (* ============================================================
-       DISTANZA NIR → PUNTO DI PRESA (da misurare sul prototipo)
-       Distanza fisica in mm tra il sensore NIR e il punto centrale
-       dove il robot afferra l'oggetto.
-       Usata per correggere la posizione Y prima di inviarla al robot.
-       ============================================================ *)
-    DISTANZA_ROBOT_MM   : REAL := 0.0;     (* mm — DA MISURARE sul prototipo *)
+    UiTag_robot         : INT  := 0;    (* contatore pick progressivo *)
+    ROBOT_CONNESSO      : BOOL := FALSE; (* TRUE = socket TCP attiva *)
 
 END_VAR

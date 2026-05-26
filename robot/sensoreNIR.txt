@@ -371,7 +371,7 @@ CASE Stato OF
 					segmentazione(
 						track_mat_select  := MSI_data[index_nir].track_mat_select,
 						indice_codice_mat := MSI_data[index_nir].indice_codice_mat,
-						encoder_pos       := Counter,
+						encoder_pos       := ENCODER_COUNTER,  (* da GVL_ROBOT — aggiornato da Gestione_Encoder *)
 						enable            := NIR_ATTIVO
 					);
 					n_volte:=n_volte+1;

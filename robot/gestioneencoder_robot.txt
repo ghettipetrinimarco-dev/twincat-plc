@@ -1,0 +1,106 @@
+(*
+    PROGRAM Gestione_Encoder — versione ROBOT
+    ==========================================
+    Differenze rispetto alla versione selezionatrice:
+    - Rimossa: logica sparo Output_NIR (no elettrovalvole)
+    - Rimossa: DISTANZA_EV tracking per singoli pacchetti buffer
+    - Rimossa: elaborazione MSI_elab (filtro inquinamento, step 91-94)
+    - Aggiunta: ENCODER_COUNTER := Counter (condivide valore HW con altri task)
+    - Mantenuta: lettura encoder HW, calcolo SPEED, ENCODER_OK, diagnostica task
+
+    La posizione degli oggetti è ora gestita da FB_Segmentazione in Sensore_NIR,
+    che riceve ENCODER_COUNTER direttamente da questo task via GVL_ROBOT.
+
+    Task: Input_Output — 100µs, Priorità 0
+*)
+PROGRAM Gestione_Encoder_Robot
+VAR
+    Fronte_stato    : R_TRIG;
+    Fronte_ok       : R_TRIG;
+    partial         : UDINT := 0;
+    indietro        : BOOL;
+    SPEED_calc      : REAL;
+    Ritardo         : TON;
+    Counter         AT %I* : UDINT;         (* contatore encoder HW *)
+    Encoder_STATE   AT %I* : UINT;          (* stato modulo encoder EtherCAT *)
+    Period          AT %I* : UDINT;         (* periodo impulsi encoder *)
+    max_time_task   : UDINT;
+    count_exceed    : UDINT;
+    All_encoder     : BOOL;
+    old_counter     : UDINT;
+    incremento      : UDINT;
+END_VAR
+
+
+(* ============================================================
+   Copia Counter HW nel GVL — accessibile da Sensore_NIR
+   ============================================================ *)
+ENCODER_COUNTER := Counter;
+
+IF NOT ENABLE THEN
+
+    (* ============================================================
+       Calcolo velocità nastro
+       ============================================================ *)
+    IF Period > 0 THEN
+        SPEED_calc := (SVILUPPO_ESTERNO / IMPULSI_ENCODER * 10000) / Period;
+    END_IF
+    IF SPEED_calc < 0.1 THEN SPEED := 0; ELSE SPEED := SPEED_calc; END_IF
+
+    (* ============================================================
+       Calcolo PASSO_ENCODER (usato da altri moduli per conversione)
+       ============================================================ *)
+    IF partial > Counter AND SPEED > 0.1 AND Counter <> 0 THEN
+        incremento := incremento + 1;
+    END_IF
+    IF SPEED < 0.1 OR (NOT NIR_ATTIVO AND NOT FALSE) THEN
+        partial := Counter;
+    END_IF
+    IF (Counter > partial OR partial > (Counter + MAX_COUNTER / 2))
+        AND ENCODER_OK AND NIR_ATTIVO THEN
+        IF partial > (Counter + MAX_COUNTER / 2) THEN
+            PASSO_ENCODER := (MAX_COUNTER - partial) + Counter + 1;
+        ELSE
+            PASSO_ENCODER := Counter - partial;
+        END_IF
+        partial := Counter;
+    END_IF
+
+END_IF
+
+(* ============================================================
+   Diagnostica encoder
+   ============================================================ *)
+IF old_counter <> Counter OR SPEED = 0 THEN
+    IF old_counter > Counter AND ABS(old_counter - Counter) < MAX_COUNTER / 2 THEN
+        indietro := TRUE;
+    ELSE
+        indietro := FALSE;
+    END_IF
+    old_counter := Counter;
+END_IF
+
+IF Encoder_STATE = 8 AND NOT indietro THEN
+    ENCODER_OK := TRUE;
+ELSE
+    ENCODER_OK := FALSE;
+END_IF
+
+Ritardo(IN:=(Encoder_STATE <> 8), PT:=T#3s, Q=>, ET=>);
+Fronte_stato(CLK:=Ritardo.Q, Q=>);
+Fronte_ok(CLK:=(Encoder_STATE = 8), Q=>);
+IF Fronte_stato.Q THEN All_encoder := TRUE; END_IF
+IF cancella_encoder OR Fronte_ok.Q THEN
+    All_encoder := FALSE;
+    cancella_encoder := FALSE;
+END_IF
+
+(* ============================================================
+   Diagnostica task
+   ============================================================ *)
+IF SystemTaskInfoArr[1].lastExecTime > max_time_task THEN
+    max_time_task := SystemTaskInfoArr[1].lastExecTime;
+END_IF
+IF SystemTaskInfoArr[1].cycleTimeExceeded THEN
+    count_exceed := count_exceed + 1;
+END_IF

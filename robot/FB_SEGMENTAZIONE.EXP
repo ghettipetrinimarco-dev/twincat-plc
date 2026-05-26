@@ -17,10 +17,10 @@
 *)
 FUNCTION_BLOCK FB_Segmentazione
 VAR_INPUT
-    track_mat_select    : ARRAY[1..117] OF BOOL;    (* tracce con materiale selezionato *)
-    indice_codice_mat   : ARRAY[1..117] OF INT;     (* indice materiale per ogni traccia *)
-    encoder_pos         : UDINT;                    (* posizione encoder corrente *)
-    enable              : BOOL;                     (* abilitazione elaborazione *)
+    track_mat_select    : ARRAY[1..NUM_TRACKS_NIR] OF BOOL;  (* tracce con materiale selezionato *)
+    indice_codice_mat   : ARRAY[1..NUM_TRACKS_NIR] OF INT;   (* indice materiale per ogni traccia *)
+    encoder_pos         : UDINT;                              (* posizione encoder corrente *)
+    enable              : BOOL;                               (* abilitazione elaborazione *)
 END_VAR
 VAR_OUTPUT
     n_oggetti_in_coda   : INT;  (* oggetti validi non ancora inviati *)
@@ -61,11 +61,11 @@ IF NOT enable THEN RETURN; END_IF
 n_blobs  := 0;
 in_blob  := FALSE;
 
-FOR i := 1 TO 117 DO
+FOR i := 1 TO NUM_TRACKS_NIR DO
     IF track_mat_select[i] THEN
         IF NOT in_blob THEN
             (* inizio nuovo blob *)
-            IF n_blobs < 6 THEN
+            IF n_blobs < MAX_BLOBS THEN
                 blob_tmin[n_blobs] := i;
                 blob_tmax[n_blobs] := i;
                 blob_mat [n_blobs] := indice_codice_mat[i];
@@ -94,7 +94,7 @@ FOR b := 0 TO n_blobs - 1 DO
     matched    := FALSE;
     free_slot  := -1;
 
-    FOR t := 0 TO 5 DO
+    FOR t := 0 TO MAX_BLOBS - 1 DO
         IF blob_trackers[t].attivo THEN
             overlap :=
                 (blob_tmin[b] <= blob_trackers[t].track_max + OBJ_TRACK_TOLERANCE) AND

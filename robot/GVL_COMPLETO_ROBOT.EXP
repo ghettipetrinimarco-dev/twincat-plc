@@ -1,0 +1,194 @@
+(*
+    GVL_COMPLETO_ROBOT.EXP
+    =======================
+    Variabili globali complete per il progetto robot.
+    Questo file sostituisce interamente Global_Variables.EXP della selezionatrice.
+
+    Rispetto alla selezionatrice:
+    RIMOSSO:  Output_NIR[] (no EV), CMD_OP_EV[], DISTANZA_EV, DISTANZA, APERTURA_EV
+              Modbus_Area[], idx_mb, Modbus_Comando_Old (no SCADA)
+              sistema licenza ENABLE, INTERVALLO_ORE_ISTANTANEO (non necessari)
+    AGGIUNTO: tutto GVL_ROBOT (robot, segmentazione, coda pick, encoder condiviso)
+*)
+
+(* ============================================================
+   COSTANTI — modificare solo se si cambia hardware
+   ============================================================ *)
+VAR_GLOBAL CONSTANT
+    (* Encoder *)
+    IMPULSI_ENCODER     : UINT  := 250;
+    MAX_COUNTER         : UDINT := 4294967295;
+    SVILUPPO_ESTERNO    : REAL  := 656.0;       (* mm — circonferenza rullo encoder *)
+
+    (* Sensore NIR *)
+    IP_ADRESS_SENSOR_NIR : STRING(15) := '192.168.0.10';
+    IP_PORT_SENSOR_NIR   : UDINT      := 1803;
+    IP_LOCAL             : STRING(15) := '192.168.0.1';
+    IP_PORT_LOCAL        : UDINT      := 1803;
+    NUM_TRACKS_NIR       : INT        := 117;
+    RX_NUM_NIR           : INT        := 121;   (* NUM_TRACKS_NIR + 5 - 1 *)
+    BUFFER_SIZE          : INT        := 150;
+    BUFFER_VISU          : INT        := 289;
+    BUFFER_STORICO       : INT        := 199;
+    MAX_INF              : UINT       := 50;
+
+    (* Segmentazione robot *)
+    MAX_BLOBS            : INT  := 6;    (* tracker blob simultanei max *)
+    MAX_OBJ_QUEUE        : INT  := 16;   (* slot coda pick *)
+    N_BOX                : INT  := 8;    (* box deposito *)
+END_VAR
+
+(* ============================================================
+   VARIABILI GLOBALI
+   ============================================================ *)
+VAR_GLOBAL
+    (* --- NIR / Materiali --- *)
+    MSI_data            : ARRAY[0..BUFFER_SIZE] OF RX_NIR;
+    MSI_elab            : ARRAY[0..BUFFER_SIZE] OF RX_NIR_ELAB;
+    VISU_TRACK          : ARRAY[1..NUM_TRACKS_NIR] OF INT;
+    matrix_visu         : ARRAY[0..BUFFER_VISU, 1..NUM_TRACKS_NIR] OF BYTE;
+    storico_1           : ARRAY[0..BUFFER_STORICO, 1..NUM_TRACKS_NIR] OF BYTE;
+    storico_2           : ARRAY[0..BUFFER_STORICO, 1..NUM_TRACKS_NIR] OF BYTE;
+    num_obj             : ARRAY[1..NUM_TRACKS_NIR] OF UDINT;
+    ISTO_EV             : ARRAY[1..NUM_TRACKS_NIR] OF REAL;
+    INFO_MSG            : ARRAY[0..MAX_INF] OF INT;
+    INDICE_MSG_INF      : UINT := 0;
+
+    (* --- Stato macchina --- *)
+    NIR_ATTIVO          : BOOL;
+    ENCODER_OK          : BOOL;
+    ETH_LINK_OK         : BOOL;
+    ETH_LINK_OK_VISU    : BOOL;
+    DIAGNOSTICA_OK      : BOOL;
+    Macchina_pronta     AT %Q* : BOOL;
+    Errore_connessione_sensore AT %Q* : BOOL;
+    SPEED               : REAL;
+    SPEED_OLD           : REAL;
+    SPEED_DELAY         : TON;
+    PASSO_ENCODER       : UDINT;
+    INDEX_NIR           : UINT;
+    LINEE               : INT;
+    CPU_USAGE           : UDINT;
+
+    (* --- Encoder condiviso tra task --- *)
+    ENCODER_COUNTER     : UDINT;   (* copia Counter HW — aggiornata da Gestione_Encoder_Robot *)
+
+    (* --- Calibrazione NIR --- *)
+    WHITE_CALIB         : BOOL;
+    BLACK_CALIB         : BOOL;
+    MSG_ERRORE_CALIB    : BOOL;
+    LED_TEMP_NIR        : BOOL;
+    LED_CALIB_NIR       : BOOL;
+
+    (* --- Comandi HMI --- *)
+    SPEGNI              : BOOL;
+    RIAVVIO             : BOOL;
+    CMD_LOAD            : BOOL;
+    CMD_GET_TYPE        : BOOL;
+    OK_CMD_GET_TYPE     : BOOL;
+    CMD_AUTOSAVE_START  : BOOL;
+    CMD_AUTOSAVE_STOP   : BOOL;
+    SALVA_DATI          : BOOL;
+    cancella            : BOOL;
+    cancella_encoder    : BOOL;
+    RESET_SELEZIONATI   : BOOL;
+    RESET_CAMPIONATI    : BOOL;
+    CANCELLA_INFO       : BOOL;
+    pulisci             : BOOL;
+    start_storico       : BOOL;
+    Start_pezzo         : BOOL;
+
+    (* --- Visu / storico --- *)
+    storico_full_1      : BOOL;
+    storico_full_2      : BOOL;
+    DATA_ORA            : TIMESTRUCT;
+    Current_page        : STRING(20);
+    Pressione_aria      : REAL;
+    Flussostato_aria    : REAL;
+    Press_aria_min      : REAL := 100.0;
+
+    (* --- Statistiche materiali --- *)
+    CARICO_MIN          : REAL;
+    Perc_carico         : REAL;
+    Perc_carico_parz_min : UDINT;
+    n_volte_min         : UDINT;
+
+    (* --- Robot: coda pick --- *)
+    OBJ_queue           : ARRAY[0..16] OF OBJ_PICK;
+    obj_head            : INT := 0;
+    obj_tail            : INT := 0;
+
+    (* --- Robot: tracker segmentazione --- *)
+    blob_trackers       : ARRAY[0..5] OF BLOB_TRACKER;
+
+    (* --- Robot: stato comunicazione --- *)
+    ROBOT_CONNESSO      : BOOL := FALSE;
+    ABIL_ROBOT          : BOOL := FALSE;
+    UiTag_robot         : INT  := 0;
+
+END_VAR
+
+(* ============================================================
+   VARIABILI PERSISTENTI — sopravvivono a download normale
+   ============================================================ *)
+VAR_GLOBAL PERSISTENT
+    (* Materiali *)
+    NUM_CODICI          : INT  := 68;
+    CODICI_MATERIALI    : ARRAY[0..100] OF BYTE;
+    NOMI_MATERIALI      : ARRAY[0..100, 1..28] OF BYTE;
+    MATERIALI_ATTIVI    : ARRAY[0..100] OF BOOL;
+    NUM_SELEZIONATI     : ARRAY[0..100] OF UDINT;
+    PERC_SELEZIONATI    : ARRAY[0..100] OF REAL;
+    NUM_CAMPIONATI      : ARRAY[0..100] OF UDINT;
+    PERC_CAMPIONATI     : ARRAY[0..100] OF REAL;
+    NUM_CAMPIONATI_PARZIALI_tmp : ARRAY[0..100] OF UDINT;
+    NUM_CAMPIONATI_PARZIALI     : ARRAY[0..100] OF UDINT;
+    PERC_CAMPIONATI_PARZIALI    : ARRAY[0..100] OF REAL;
+
+    (* NIR *)
+    ABIL_NIR            : BOOL;
+    NUM_LOAD_ID         : BYTE  := 16#01;
+    SFONDO              : BYTE  := 16#FE;
+    STEP                : UINT  := 1;
+    PROCESSING_DATA     : BOOL;
+    LUNGHEZZA_REGIONE   : INT   := 2;
+    LARGHEZZA_REGIONE   : INT   := 2;
+    PERC_INQUINAMENTO   : REAL  := 20.0;
+    COLOR_OPTION        : BOOL  := FALSE;
+    FATTORE_CARICO      : REAL  := 4.0;
+    COUNT_TIME          : UINT  := 1;
+    START_PARZIALE      : BOOL  := FALSE;
+    Machine_name        : STRING := 'NIR_ROBOT.117';
+    FILE_ANALYSIS       : STRING(150) := '';
+    FILE_COLOR          : STRING(150) := '';
+    TEMPO_ORA           : UINT;
+
+    (* Robot: parametri geometrici *)
+    SCAN_DISTANCE       : REAL  := 3.5;    (* mm/scan — CALIBRARE *)
+    ALTEZZA             : REAL  := 200.0;  (* mm quota Z presa — MISURARE *)
+    GRADI_ROTAZIONE     : REAL  := 0.0;
+    ATTESA_PRESA        : REAL  := 0.5;
+    ATTESA_DEPOSITO     : REAL  := 0.3;
+    DISTANZA_ROBOT_MM   : REAL  := 0.0;   (* mm NIR→presa — MISURARE *)
+    TEMPO_CICLO_ROBOT   : REAL  := 1.0;   (* s — CALIBRARE *)
+
+    (* Robot: box deposito *)
+    X_BOX               : ARRAY[0..7] OF REAL;
+    Y_BOX               : ARRAY[0..7] OF REAL;
+    Z_BOX               : ARRAY[0..7] OF REAL;
+    MATERIALI_ATTIVI_BOX : ARRAY[0..15] OF INT;
+
+    (* Robot: segmentazione *)
+    OBJ_TRACK_TOLERANCE : INT   := 3;
+    OBJ_GAP_ENCODER     : UDINT := 50;
+
+    (* Robot: comunicazione *)
+    IP_ROBOT            : STRING := '192.168.1.100'; (* DA CONFIGURARE *)
+    PORT_ROBOT          : UINT   := 10000;           (* DA CONFIGURARE *)
+
+    (* Sistema *)
+    Skip_ev             : INT;
+    Black_automatic_perc : REAL;
+    PESO_TOTALE         : REAL;
+    PESO_MATERIALE      : UINT := 240;
+END_VAR
