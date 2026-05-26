@@ -15,21 +15,8 @@ VAR CONSTANT
 END_VAR
 VAR
 	j:INT;
-	String_Tmp:ARRAY[0..BUFFER_SIZE] OF STRING;
-	String_line_tmp:STRING;
-	First_track:BOOL;
-	concat_1:STRING;
-	concat_2:STRING;
-	concat_3:STRING;
-	concat_4:STRING;
-	concat_5:STRING;
-	concat_6:STRING;
-	concat_7:STRING;
-	concat_8:STRING;
-	concat_9:STRING;
-	concat_10:STRING;
-	concat_11:STRING;
-	UiTag:INT:= 0;
+	(* Segmentazione oggetti NIR â†’ pick robot *)
+	segmentazione: FB_Segmentazione;
 
 	(*Ingressi----------------------*)
 	EK1100_STATE AT %I*:UINT;
@@ -353,38 +340,9 @@ CASE Stato OF
 										MSI_data[index_nir].indice_codice_mat[indice]:=i;
 
 										IF MATERIALI_ATTIVI[i] THEN
-											indice_box := MATERIALI_ATTIVI_BOX[i];
 											MSI_data[index_nir].track_mat_select[indice]:=TRUE;
 											MSI_elab[index_nir].track_mat_select[indice]:=TRUE;
-
-											(* START CHAR and UITAG *)
-											concat_1:=CONCAT(START_CHAR,INT_TO_STRING(UiTag));
-											 (* X *)
-											concat_2 := CONCAT(SEP,INT_TO_STRING(indice));
-											(*Y*)
-											concat_3 := CONCAT(SEP,  REAL_TO_STRING(index_nir*SCAN_DISTANCE+DISTANCE_OFFSET));
-											(* Z  *)
-											concat_4 := CONCAT(SEP,REAL_TO_STRING(ALTEZZA));
-											 (* Gradi Rotazione *)
-											concat_5 := CONCAT(SEP, REAL_TO_STRING(GRADI_ROTAZIONE));
-											 (* Attesa Presa *)
-											concat_6:=CONCAT(SEP, REAL_TO_STRING(ATTESA_PRESA));
-											(* X deposito *)
-											concat_7:= CONCAT(SEP, REAL_TO_STRING(X_BOX[indice_box]));
-											(* Y deposito *)
-											concat_8 :=CONCAT(SEP, REAL_TO_STRING(Y_BOX[indice_box]));
-											(* Z deposito *)
-											concat_9 :=CONCAT(SEP, REAL_TO_STRING(Z_BOX[indice_box]));
-											(* Attesa deposito *)
-											concat_10 := CONCAT(SEP, REAL_TO_STRING(ATTESA_DEPOSITO));
-											(* END *)
-											concat_11 := CONCAT(SEP, END_CHAR);
-											(* Expected output:: 		@0;10;10;10;0;0;32;34;43;0;#		*)
-											String_line_tmp := CONCAT(concat_1, CONCAT(concat_2, CONCAT(concat_3, CONCAT(concat_4, CONCAT(concat_5, CONCAT(concat_6, CONCAT(concat_7, CONCAT(concat_8, CONCAT(concat_9, CONCAT(concat_10, concat_11))))))))));
-											IF First_track THEN
-												First_track:=FALSE;
-											END_IF
-											UiTag:=UiTag+1;
+											(* Stringa pick generata da FB_Segmentazione dopo END_FOR *)
 										ELSE
 											MSI_data[index_nir].track_mat_inq[indice]:=TRUE;
 										END_IF
@@ -409,7 +367,13 @@ CASE Stato OF
 							aux_pixel:=aux_pixel+1;
 						END_IF
 					END_FOR
-					String_Tmp[index_nir]:=String_line_tmp;
+					(* Segmentazione oggetti: raggruppa tracce attive in OBJ_PICK *)
+					segmentazione(
+						track_mat_select  := MSI_data[index_nir].track_mat_select,
+						indice_codice_mat := MSI_data[index_nir].indice_codice_mat,
+						encoder_pos       := Counter,
+						enable            := NIR_ATTIVO
+					);
 					n_volte:=n_volte+1;
 					n_volte_min:=n_volte_min+1;
 					MSI_data[index_nir].End_of_file:=RX_Tmp_MSI[NUM_TRACKS_NIR+4];
@@ -436,10 +400,7 @@ CASE Stato OF
 					index_nir:=index_nir+1;
 					IF index_nir >BUFFER_SIZE THEN
 						index_nir:=0;
-						FOR j:=0 TO BUFFER_SIZE DO
-							String_ToSend[j]:=String_Tmp[j];
-						END_FOR
-						Trig:=TRUE;
+						(* OBJ_queue gestita direttamente da FB_Segmentazione *)
 					END_IF
 					riga:=riga+1;
 					IF riga >BUFFER_VISU THEN riga:=0; END_IF
@@ -622,7 +583,7 @@ IF CMD_AUTOSAVE_STOP AND ABIL_NIR AND (Stato = 2 OR calib_ok) THEN calib_ok:=TRU
 spegni_nir(CLK:=SPEGNI , Q=> );
 trig_calib(CLK:=calib_ok , Q=> );
 IF trig_calib.Q OR spegni_nir.Q THEN IF hSocket_UDP.handle <> 0 THEN Stato:=1; ELSE Stato:=0; END_IF END_IF
-(*Diagnostica nel caso il sensore non è ok*)
+(*Diagnostica nel caso il sensore non ï¿½ ok*)
 error_MSI(IN:=(Stato=2 AND MSI_ok=FALSE) , PT:=T#20S , Q=> , ET=> );
 IF error_MSI.Q THEN
 	All_link:=TRUE;
@@ -631,7 +592,7 @@ IF error_MSI.Q THEN
 END_IF
 (*Stato ricezione attiva*)
 IF Stato=2 AND MSI_ok AND ENCODER_OK AND ABIL_NIR THEN NIR_ATTIVO:=TRUE; ELSE NIR_ATTIVO:=FALSE; END_IF
-(*Calcolo velocità sensore*)
+(*Calcolo velocitï¿½ sensore*)
 NUM_CICLI:=NUM_CICLI+1;
 IF NUM_CICLI>=5000 THEN
 	NUM_CICLI:=0;
@@ -749,11 +710,8 @@ END_IF
 (*Diagnostica I/O*)
 IF EK1100_STATE<>8 OR OUT_1_STATE<>8 THEN DIAGNOSTICA_OK:=FALSE; ELSE DIAGNOSTICA_OK:=TRUE; END_IF
 (*Uscite*)
-Out_1:=Trig;
-Ritardo_Trig.IN:=Trig;
-Ritardo_Trig.PT:=INT_TO_TIME(TRIG_DELAY_RESET);
-Ritardo_Trig();
-IF Ritardo_Trig.Q THEN Trig:=FALSE; END_IF;
+(* Out_1 / Trig rimossi: la logica pick Ã¨ ora gestita via OBJ_queue da Gestione_Robot *)
+(* Out_1:=Trig; â€” rimosso v2.0 *)
 
 (*Calcolo tempo ciclo massimo della task*)
 IF SystemTaskInfoArr[2].lastExecTime>max_time_task THEN max_time_task:=SystemTaskInfoArr[2].lastExecTime; END_IF
