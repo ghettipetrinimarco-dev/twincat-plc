@@ -1,0 +1,106 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := 'Robot' *)
+(* @OBJECTFLAGS := '0, 8' *)
+PROGRAM Robot_ObjectBuilder
+VAR
+	scan_index : UINT;
+	track_index : INT;
+	code_index : INT;
+	slot_index : INT;
+	first_track : INT;
+	last_track : INT;
+	group_open : BOOL;
+	current_material_index : INT;
+	current_material_code : BYTE;
+	current_box_index : INT;
+	group_width : INT;
+	center_track : REAL;
+	slot_found : BOOL;
+	is_target : BOOL;
+END_VAR
+
+IF ROBOT_ENABLED THEN
+	(* INDEX_NIR punta al prossimo slot di scrittura: qui leggiamo l'ultimo scan completato. *)
+	IF INDEX_NIR = 0 THEN
+		scan_index := BUFFER_SIZE;
+	ELSE
+		scan_index := INDEX_NIR - 1;
+	END_IF
+
+	IF scan_index <> ROBOT_LAST_PROCESSED_NIR_INDEX THEN
+		ROBOT_LAST_PROCESSED_NIR_INDEX := scan_index;
+		group_open := FALSE;
+		first_track := 0;
+		last_track := 0;
+		current_material_index := -1;
+		current_material_code := 0;
+		current_box_index := 0;
+
+		FOR track_index := 1 TO NUM_TRACKS_NIR DO
+			is_target := FALSE;
+			FOR code_index := 0 TO NUM_CODICI DO
+				IF MSI_data[scan_index].track[track_index] = CODICI_MATERIALI[code_index] THEN
+					IF MATERIALI_ATTIVI[code_index] THEN
+						is_target := TRUE;
+						IF NOT group_open THEN
+							first_track := track_index;
+							current_material_index := code_index;
+							current_material_code := CODICI_MATERIALI[code_index];
+							current_box_index := MATERIALI_ATTIVI_BOX[code_index];
+						END_IF
+					END_IF
+					EXIT;
+				END_IF
+			END_FOR
+
+			IF is_target THEN
+				group_open := TRUE;
+				last_track := track_index;
+			END_IF
+
+			IF (NOT is_target OR track_index = NUM_TRACKS_NIR) AND group_open THEN
+				group_width := last_track - first_track + 1;
+				IF group_width >= ROBOT_MIN_WIDTH_TRACKS AND group_width <= ROBOT_MAX_WIDTH_TRACKS AND current_box_index > 0 THEN
+					slot_found := FALSE;
+					FOR slot_index := 0 TO ROBOT_MAX_TARGETS DO
+						IF NOT ROBOT_TARGETS[slot_index].Valid THEN
+							slot_found := TRUE;
+							center_track := (INT_TO_REAL(first_track) + INT_TO_REAL(last_track)) / 2.0;
+							ROBOT_TARGETS[slot_index].Id := ROBOT_NEXT_ID;
+							ROBOT_TARGETS[slot_index].MaterialIndex := current_material_index;
+							ROBOT_TARGETS[slot_index].MaterialCode := current_material_code;
+							ROBOT_TARGETS[slot_index].BoxIndex := current_box_index;
+							ROBOT_TARGETS[slot_index].FirstTrack := first_track;
+							ROBOT_TARGETS[slot_index].LastTrack := last_track;
+							ROBOT_TARGETS[slot_index].CenterTrack := center_track;
+							ROBOT_TARGETS[slot_index].PickX := ROBOT_X_ORIGIN_MM + ((center_track - 0.5) * ROBOT_TRACK_PITCH_MM);
+							ROBOT_TARGETS[slot_index].PickY := ROBOT_PICK_Y_MM;
+							ROBOT_TARGETS[slot_index].PickZ := ROBOT_PICK_Z_MM;
+							ROBOT_TARGETS[slot_index].PickAngle := ROBOT_PICK_ANGLE_DEG;
+							ROBOT_TARGETS[slot_index].PositionImpulses := 0;
+							ROBOT_TARGETS[slot_index].Valid := TRUE;
+							ROBOT_TARGETS[slot_index].InWindow := FALSE;
+							ROBOT_TARGETS[slot_index].Sent := FALSE;
+							ROBOT_TARGETS[slot_index].Picked := FALSE;
+							ROBOT_TARGETS[slot_index].Failed := FALSE;
+							ROBOT_TARGETS[slot_index].Missed := FALSE;
+							ROBOT_NEXT_ID := ROBOT_NEXT_ID + 1;
+							ROBOT_TARGETS_DETECTED := ROBOT_TARGETS_DETECTED + 1;
+							EXIT;
+						END_IF
+					END_FOR
+					IF NOT slot_found THEN
+						ROBOT_QUEUE_FULL_COUNT := ROBOT_QUEUE_FULL_COUNT + 1;
+					END_IF
+				END_IF
+				group_open := FALSE;
+				first_track := 0;
+				last_track := 0;
+				current_material_index := -1;
+				current_material_code := 0;
+				current_box_index := 0;
+			END_IF
+		END_FOR
+	END_IF
+END_IF
+END_PROGRAM

@@ -1,0 +1,56 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := 'Robot' *)
+(* @OBJECTFLAGS := '0, 8' *)
+PROGRAM Robot_Queue
+VAR
+	slot_index : INT;
+	target_available : BOOL;
+	tracking_step : UDINT;
+END_VAR
+
+ROBOT_TARGET_REQUEST := FALSE;
+target_available := FALSE;
+tracking_step := 0;
+
+IF ROBOT_SIMULATION THEN
+	tracking_step := ROBOT_SIM_TRACKING_STEP_IMP;
+ELSIF ROBOT_ENCODER_STEP_VALID THEN
+	tracking_step := ROBOT_ENCODER_STEP_IMP;
+	ROBOT_ENCODER_STEP_VALID := FALSE;
+END_IF
+
+IF ROBOT_ENABLED THEN
+	FOR slot_index := 0 TO ROBOT_MAX_TARGETS DO
+		IF ROBOT_TARGETS[slot_index].Valid AND NOT ROBOT_TARGETS[slot_index].Picked AND NOT ROBOT_TARGETS[slot_index].Failed AND NOT ROBOT_TARGETS[slot_index].Missed THEN
+			IF tracking_step > 0 THEN
+				ROBOT_TARGETS[slot_index].PositionImpulses := ROBOT_TARGETS[slot_index].PositionImpulses + tracking_step;
+			END_IF
+
+			IF ROBOT_TARGETS[slot_index].PositionImpulses >= ROBOT_PICK_WINDOW_START_IMP AND ROBOT_TARGETS[slot_index].PositionImpulses <= ROBOT_PICK_WINDOW_END_IMP THEN
+				ROBOT_TARGETS[slot_index].InWindow := TRUE;
+			ELSE
+				ROBOT_TARGETS[slot_index].InWindow := FALSE;
+			END_IF
+
+			IF ROBOT_TARGETS[slot_index].PositionImpulses > ROBOT_PICK_WINDOW_END_IMP AND NOT ROBOT_TARGETS[slot_index].Sent THEN
+				ROBOT_TARGETS[slot_index].Missed := TRUE;
+				ROBOT_TARGETS_MISSED := ROBOT_TARGETS_MISSED + 1;
+			END_IF
+
+			IF ROBOT_TARGETS[slot_index].InWindow AND NOT ROBOT_TARGETS[slot_index].Sent AND ROBOT_STATE_GLOBAL.Ready AND NOT target_available THEN
+				ROBOT_CURRENT_TARGET := ROBOT_TARGETS[slot_index];
+				ROBOT_TARGET_REQUEST := TRUE;
+				ROBOT_TARGETS[slot_index].Sent := TRUE;
+				ROBOT_TARGETS_SENT := ROBOT_TARGETS_SENT + 1;
+				target_available := TRUE;
+			END_IF
+
+			IF ROBOT_SIM_PICK_DONE AND ROBOT_TARGETS[slot_index].Id = ROBOT_CURRENT_TARGET.Id THEN
+				ROBOT_TARGETS[slot_index].Picked := TRUE;
+				ROBOT_TARGETS_PICKED := ROBOT_TARGETS_PICKED + 1;
+				ROBOT_TARGETS[slot_index].Valid := FALSE;
+			END_IF
+		END_IF
+	END_FOR
+END_IF
+END_PROGRAM

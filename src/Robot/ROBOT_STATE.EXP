@@ -1,0 +1,18 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := 'Robot' *)
+(* @OBJECTFLAGS := '0, 8' *)
+TYPE ROBOT_STATE :
+STRUCT
+	Enabled : BOOL;
+	Simulation : BOOL;
+	Ready : BOOL;
+	Busy : BOOL;
+	Error : BOOL;
+	Ack : BOOL;
+	PickDone : BOOL;
+	PickFailed : BOOL;
+	CurrentTargetId : UDINT;
+	ErrorCode : UINT;
+END_STRUCT
+END_TYPE
+(* @END_DECLARATION := '0' *)

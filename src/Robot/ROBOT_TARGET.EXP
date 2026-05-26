@@ -1,0 +1,26 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := 'Robot' *)
+(* @OBJECTFLAGS := '0, 8' *)
+TYPE ROBOT_TARGET :
+STRUCT
+	Id : UDINT;
+	MaterialIndex : INT;
+	MaterialCode : BYTE;
+	BoxIndex : INT;
+	FirstTrack : INT;
+	LastTrack : INT;
+	CenterTrack : REAL;
+	PickX : REAL;
+	PickY : REAL;
+	PickZ : REAL;
+	PickAngle : REAL;
+	PositionImpulses : UDINT;
+	Valid : BOOL;
+	InWindow : BOOL;
+	Sent : BOOL;
+	Picked : BOOL;
+	Failed : BOOL;
+	Missed : BOOL;
+END_STRUCT
+END_TYPE
+(* @END_DECLARATION := '0' *)
