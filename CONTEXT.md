@@ -1,6 +1,6 @@
 # CONTEXT.md — Fonte di Verità del Progetto
 
-> Aggiornato: 2026-05-05 (sessione 3 — task configuration acquisita, DISTANZA risolta)
+> Aggiornato: 2026-05-26 (sessione 4 — progetto robot analizzato, codice segmentazione scritto)
 > Leggere sempre prima di toccare qualsiasi file.
 
 ---
@@ -246,6 +246,77 @@ Pacchetto dati: 121 byte (`RX_NUM_NIR=121` = 117 tracce + 5 header - 1)
 
 ---
 
+## Progetto Robot (secondario — prototipo fisico in azienda)
+
+### Descrizione
+Robot picker su nastro trasportatore: sensore NIR LLA rileva il polimero,
+braccio robot multi-asse (ABB, modello da confermare) preleva i pezzi classificati.
+Il prototipo fisico esiste ma non ha mai avuto una logica PLC funzionante.
+
+### Architettura implementata (codice in `robot/`)
+
+```
+NIR UDP → Sensore_NIR → FB_Segmentazione → OBJ_queue[] → Gestione_Robot → TCP → Robot
+```
+
+**Flusso dettagliato:**
+1. `Sensore_NIR` riceve pacchetti UDP dal NIR, popola `track_mat_select[]`
+2. `FB_Segmentazione` (chiamata una volta per scan) raggruppa tracce adiacenti
+   in blob, traccia blob tra scan consecutive, chiude oggetti per gap encoder
+3. `OBJ_queue[0..16]` (coda circolare) accumula oggetti completati
+4. `Gestione_Robot` legge la coda, costruisce stringa pick, invia via TCP
+
+**Formato stringa pick:**
+```
+@UiTag,X_traccia,Y_mm,Z_mm,Rotazione,AttesaPresa,X_box,Y_box,Z_box,AttesaDeposito,#
+Esempio: @42,58.5,1834.6,200.0,0.0,0.5,320.0,340.0,50.0,0.3,#
+```
+
+### File robot/
+
+| File | Stato |
+|---|---|
+| `OBJ_PICK.EXP` | ✅ completo |
+| `BLOB_TRACKER.EXP` | ✅ completo |
+| `FB_SEGMENTAZIONE.EXP` | ✅ completo |
+| `GVL_ROBOT.EXP` | ✅ completo (valori placeholder) |
+| `gestionerobot.txt` | ✅ riscritto v2.0 — TCP diretto robot, no PickMaster |
+| `sensoreNIR.txt` | ⚠️ da modificare — vedi INTEGRAZIONE_SENSORE_NIR.md |
+| `INTEGRAZIONE_SENSORE_NIR.md` | ✅ guida passo-passo modifiche |
+| `ANALISI.md` | ✅ analisi completa bug progetto precedente |
+
+### Decisioni robot
+
+| Data | Decisione | Motivo |
+|---|---|---|
+| 2026-05-26 | Rimosso PickMaster — TCP diretto al robot | Nessun PC PickMaster confermato sul prototipo |
+| 2026-05-26 | Segmentazione per gap encoder, non per scan count | Robusta al wrap del ring buffer (BUFFER_SIZE=150) |
+| 2026-05-26 | MAX_BLOBS=6, MAX_OBJ_QUEUE=16 | Sufficienti per nastro recycling tipico |
+
+### Variabili robot da configurare (placeholder in GVL_ROBOT.EXP)
+
+| Variabile | Default | Da fare |
+|---|---|---|
+| `IP_ROBOT` | '192.168.1.100' | Leggere dal controller robot |
+| `PORT_ROBOT` | 10000 | Leggere dal controller robot |
+| `DISTANZA_ROBOT_MM` | 0.0 | Misurare: distanza fisica NIR → punto di presa |
+| `ALTEZZA` | 200.0 | Misurare: quota Z di presa |
+| `SCAN_DISTANCE` | 3.5 | Calcolare: velocità nastro / linee NIR al secondo |
+| `X_BOX[]`, `Y_BOX[]`, `Z_BOX[]` | 0.0 | Misurare: coordinate box deposito |
+| `OBJ_GAP_ENCODER` | 50 | Calibrare: impulsi encoder tra oggetti diversi |
+
+### TODO robot
+
+- [ ] Accedere al controller robot fisico: leggere IP, porta, programma RAPID presente
+- [ ] Caricare sul robot il programma RAPID listener TCP (`robot/RAPID_ROBOT.prg`)
+- [ ] Modificare `sensoreNIR.txt` secondo `INTEGRAZIONE_SENSORE_NIR.md`
+- [ ] Misurare `DISTANZA_ROBOT_MM` e `ALTEZZA` sul prototipo
+- [ ] Calcolare `SCAN_DISTANCE` (velocità nastro ÷ linee NIR/s)
+- [ ] Configurare `X_BOX[]`, `Y_BOX[]`, `Z_BOX[]` per le posizioni di deposito
+- [ ] Test end-to-end: NIR → PLC → robot
+
+---
+
 ## Storico Sessioni
 
 | Data | Attività |
@@ -253,3 +324,4 @@ Pacchetto dati: 121 byte (`RX_NUM_NIR=121` = 117 tracce + 5 header - 1)
 | 2026-05-05 | Prima sessione: raccolta contesto, struttura repo, documentazione iniziale |
 | 2026-05-05 | Seconda sessione: acquisizione codice sorgente completo (4 POU + GVL), analisi architettura |
 | 2026-05-05 | Terza sessione: acquisizione TWINCAT_CONFIGURATION.EXP e TASK_CONFIGURATION.EXP, risoluzione DISTANZA (impulsi encoder, 524,8mm fisici) |
+| 2026-05-26 | Quarta sessione: analisi progetto robot (branch session/2026-05-16), identificati bug (sovrascrittura tracce, no segmentazione), rimosso PickMaster, scritti FB_Segmentazione + OBJ_PICK + BLOB_TRACKER + GVL_ROBOT + Gestione_Robot v2.0 |
