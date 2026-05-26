@@ -18,6 +18,7 @@ File:
 | `ROBOT_STATE.EXP` | Tipo stato robot |
 | `ROBOT_GLOBALS.EXP` | GVL robot, parametri e contatori |
 | `ROBOT_OBJECT_BUILDER.EXP` | Crea target da gruppi di tracce NIR |
+| `ROBOT_TEST_INPUT.EXP` | Crea target manuali per test senza NIR |
 | `ROBOT_QUEUE.EXP` | Avanza target e gestisce finestra presa |
 | `GESTIONE_ROBOT.EXP` | Simulatore robot ready/busy/picked |
 | `README.md` | Nota locale |
@@ -62,6 +63,7 @@ Quando si passa alla Fase 1 reale:
 
 3. Importare i PROGRAM:
    - `Robot_ObjectBuilder`
+   - `Robot_TestInput`
    - `Robot_Queue`
    - `Gestione_Robot`
 
@@ -71,6 +73,7 @@ Quando si passa alla Fase 1 reale:
 TASK Elaboration 10ms:
     Processing();
     Robot_ObjectBuilder();
+    Robot_TestInput();
     Robot_Queue();
     Gestione_Robot();
 ```
@@ -177,3 +180,32 @@ Il protocollo reale andra' implementato quando avremo:
 7. Verificare che `GESTIONE_ROBOT` passi `Ready -> Busy -> Ready`.
 8. Verificare `ROBOT_TARGETS_PICKED` o `ROBOT_TARGETS_MISSED`.
 
+## Test manuale senza NIR
+
+Per provare la coda robot senza aspettare il sensore:
+
+```text
+ROBOT_ENABLED := TRUE
+ROBOT_SIMULATION := TRUE
+ROBOT_TEST_INPUT_ENABLED := TRUE
+ROBOT_TEST_FIRST_TRACK := 50
+ROBOT_TEST_LAST_TRACK := 55
+ROBOT_TEST_BOX_INDEX := 1
+ROBOT_TEST_CREATE_TARGET := TRUE
+```
+
+Atteso:
+
+```text
+1. `Robot_TestInput` crea un target in `ROBOT_TARGETS[]`
+2. `Robot_Queue` fa avanzare `PositionImpulses`
+3. quando entra in finestra, `ROBOT_TARGET_REQUEST` va TRUE per un ciclo
+4. `Gestione_Robot` passa `Ready -> Busy -> Ready`
+5. `ROBOT_TARGETS_PICKED` incrementa
+```
+
+Se invece la finestra e' troppo corta o il robot simulato resta busy:
+
+```text
+ROBOT_TARGETS_MISSED incrementa
+```

@@ -6,6 +6,7 @@ Scopo:
 
 - definire tipi e variabili per target robot
 - costruire target da scan NIR
+- creare target manuali di test con `Robot_TestInput`
 - tracciare target con encoder
 - simulare un robot ready/busy/picked
 

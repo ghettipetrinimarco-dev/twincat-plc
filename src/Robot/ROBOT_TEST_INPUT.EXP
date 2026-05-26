@@ -1,0 +1,47 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := 'Robot' *)
+(* @OBJECTFLAGS := '0, 8' *)
+PROGRAM Robot_TestInput
+VAR
+	slot_index : INT;
+	slot_found : BOOL;
+	center_track : REAL;
+END_VAR
+
+IF ROBOT_ENABLED AND ROBOT_SIMULATION AND ROBOT_TEST_INPUT_ENABLED AND ROBOT_TEST_CREATE_TARGET THEN
+	slot_found := FALSE;
+	FOR slot_index := 0 TO ROBOT_MAX_TARGETS DO
+		IF NOT ROBOT_TARGETS[slot_index].Valid THEN
+			slot_found := TRUE;
+			center_track := (INT_TO_REAL(ROBOT_TEST_FIRST_TRACK) + INT_TO_REAL(ROBOT_TEST_LAST_TRACK)) / 2.0;
+			ROBOT_TARGETS[slot_index].Id := ROBOT_NEXT_ID;
+			ROBOT_TARGETS[slot_index].MaterialIndex := ROBOT_TEST_MATERIAL_INDEX;
+			ROBOT_TARGETS[slot_index].MaterialCode := ROBOT_TEST_MATERIAL_CODE;
+			ROBOT_TARGETS[slot_index].BoxIndex := ROBOT_TEST_BOX_INDEX;
+			ROBOT_TARGETS[slot_index].FirstTrack := ROBOT_TEST_FIRST_TRACK;
+			ROBOT_TARGETS[slot_index].LastTrack := ROBOT_TEST_LAST_TRACK;
+			ROBOT_TARGETS[slot_index].CenterTrack := center_track;
+			ROBOT_TARGETS[slot_index].PickX := ROBOT_X_ORIGIN_MM + ((center_track - 0.5) * ROBOT_TRACK_PITCH_MM);
+			ROBOT_TARGETS[slot_index].PickY := ROBOT_PICK_Y_MM;
+			ROBOT_TARGETS[slot_index].PickZ := ROBOT_PICK_Z_MM;
+			ROBOT_TARGETS[slot_index].PickAngle := ROBOT_PICK_ANGLE_DEG;
+			ROBOT_TARGETS[slot_index].PositionImpulses := 0;
+			ROBOT_TARGETS[slot_index].Valid := TRUE;
+			ROBOT_TARGETS[slot_index].InWindow := FALSE;
+			ROBOT_TARGETS[slot_index].Sent := FALSE;
+			ROBOT_TARGETS[slot_index].Picked := FALSE;
+			ROBOT_TARGETS[slot_index].Failed := FALSE;
+			ROBOT_TARGETS[slot_index].Missed := FALSE;
+			ROBOT_NEXT_ID := ROBOT_NEXT_ID + 1;
+			ROBOT_TARGETS_DETECTED := ROBOT_TARGETS_DETECTED + 1;
+			EXIT;
+		END_IF
+	END_FOR
+
+	IF NOT slot_found THEN
+		ROBOT_QUEUE_FULL_COUNT := ROBOT_QUEUE_FULL_COUNT + 1;
+	END_IF
+
+	ROBOT_TEST_CREATE_TARGET := FALSE;
+END_IF
+END_PROGRAM
