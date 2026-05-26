@@ -51,6 +51,7 @@ Riferimenti robot usati solo nello scaffold e nei documenti:
 - `ROBOT_TARGET_REQUEST`
 - `ROBOT_SIM_PICK_DONE`
 - `ROBOT_TEST_*`
+- `ROBOT_ENCODER_PENDING_IMP`
 - `MATERIALI_ATTIVI_BOX`
 - `X_BOX/Y_BOX/Z_BOX`
 
@@ -65,6 +66,35 @@ Riferimenti al progetto esistente usati dallo scaffold:
 - `MATERIALI_ATTIVI`
 
 Questi esistono nel progetto attuale.
+
+### Aggancio encoder reale
+
+`Gestione_Encoder` ora alimenta il layer robot quando:
+
+```st
+ROBOT_ENABLED AND NOT ROBOT_SIMULATION
+```
+
+Ogni nuovo `PASSO_ENCODER` viene:
+
+- scritto in `ROBOT_ENCODER_STEP_IMP` come ultimo passo osservato
+- sommato in `ROBOT_ENCODER_PENDING_IMP`
+- segnalato con `ROBOT_ENCODER_STEP_VALID := TRUE`
+
+`Robot_Queue` consuma `ROBOT_ENCODER_PENDING_IMP` e poi azzera:
+
+```st
+ROBOT_ENCODER_STEP_IMP
+ROBOT_ENCODER_PENDING_IMP
+ROBOT_ENCODER_STEP_VALID
+```
+
+Motivo:
+
+```text
+Gestione_Encoder gira a 0.100 ms, Robot_Queue e' prevista nella task a 10 ms.
+Con un solo valore istantaneo si rischia di perdere impulsi tra due cicli della queue.
+```
 
 ## Correzioni fatte dopo verifica
 
@@ -184,4 +214,3 @@ non collegato ai task nel repo
 non verificato dal compilatore TwinCAT
 non pronto per produzione
 ```
-

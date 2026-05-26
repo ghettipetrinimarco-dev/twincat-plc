@@ -1,6 +1,6 @@
 # Robot layer draft
 
-Questa cartella contiene una bozza non collegata al progetto TwinCAT attivo.
+Questa cartella contiene una bozza collegata solo al passo encoder reale, ma non ancora aggiunta alle task TwinCAT.
 
 Scopo:
 
@@ -23,5 +23,6 @@ Prima di usarla su macchina reale servono:
 Nota sul tracking:
 
 - in simulazione `Robot_Queue` usa `ROBOT_SIM_TRACKING_STEP_IMP`
-- su macchina reale deve essere collegato uno step encoder esplicito tramite `ROBOT_ENCODER_STEP_VALID` e `ROBOT_ENCODER_STEP_IMP`
+- su macchina reale `Gestione_Encoder` accumula gli impulsi in `ROBOT_ENCODER_PENDING_IMP`
+- `Robot_Queue` consuma `ROBOT_ENCODER_PENDING_IMP` quando `ROBOT_ENCODER_STEP_VALID` e' TRUE
 - non usare direttamente `PASSO_ENCODER` in un task lento senza impulso di validita', altrimenti si rischia di contare piu' volte lo stesso passo

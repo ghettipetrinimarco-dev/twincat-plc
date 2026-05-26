@@ -49,6 +49,11 @@ IF (speed<0.1 OR (NOT NIR_ATTIVO OR  test)) AND NOT Trig_option THEN
 END_IF
 IF (Counter_aux >partial  OR  partial>(Counter_aux+MAX_Counter/2)) AND NIR_ATTIVO AND (ENCODER_OK OR test OR Trig_option) THEN
 	IF partial>(Counter_aux+MAX_Counter/2) THEN PASSO_ENCODER:=(MAX_Counter-partial)+Counter_aux+1; ELSE PASSO_ENCODER:=Counter_aux-partial; END_IF
+	IF ROBOT_ENABLED AND NOT ROBOT_SIMULATION THEN
+		ROBOT_ENCODER_STEP_IMP:=PASSO_ENCODER;
+		ROBOT_ENCODER_PENDING_IMP:=ROBOT_ENCODER_PENDING_IMP+PASSO_ENCODER;
+		ROBOT_ENCODER_STEP_VALID:=TRUE;
+	END_IF
 	IF PASSO_ENCODER>1 THEN max_impulsi:=max_impulsi+1; END_IF
 	partial:=Counter_aux;
 	trovato_ind_nir:=FALSE;

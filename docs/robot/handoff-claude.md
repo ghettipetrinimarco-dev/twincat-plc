@@ -142,7 +142,7 @@ Chiedere una review critica su:
 4. La gestione `INDEX_NIR - 1` e' corretta rispetto a `Sensore_NIR`?
 5. `Robot_Queue` dovrebbe girare in task 10 ms o serve task piu' veloce?
 6. La simulazione con `ROBOT_TEST_INPUT` e' sufficiente per Fase 1?
-7. Quale strategia migliore per collegare `ROBOT_ENCODER_STEP_VALID` a `Gestione_Encoder`?
+7. L'accumulo `ROBOT_ENCODER_PENDING_IMP` tra `Gestione_Encoder` e `Robot_Queue` e' sufficiente o serve una strategia diversa tra task a 0.100 ms e task a 10 ms?
 8. Ci sono incompatibilita' TwinCAT 2 evidenti nei file `.EXP` nuovi?
 9. Meglio tenere object builder in PLC o spostarlo su PC esterno?
 10. Quali test minimi fare in TwinCAT prima di toccare macchina reale?
@@ -189,4 +189,3 @@ Solo dopo:
 ```text
 implementare protocollo robot reale
 ```
-

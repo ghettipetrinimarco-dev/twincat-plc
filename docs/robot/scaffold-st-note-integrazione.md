@@ -143,14 +143,15 @@ ROBOT_SIM_TRACKING_STEP_IMP
 
 quando `ROBOT_SIMULATION = TRUE`.
 
-Su macchina reale bisognera' collegare:
+Su macchina reale `Gestione_Encoder` alimenta:
 
 ```st
 ROBOT_ENCODER_STEP_VALID
 ROBOT_ENCODER_STEP_IMP
+ROBOT_ENCODER_PENDING_IMP
 ```
 
-a un impulso prodotto da `Gestione_Encoder`.
+`Robot_Queue` consuma `ROBOT_ENCODER_PENDING_IMP` e lo azzera dopo aver aggiornato i target.
 
 ### Robot reale non implementato
 
