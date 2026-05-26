@@ -237,17 +237,18 @@ IF NOT FB_Ricevi.bBusy THEN
         timer_ack(IN:=FALSE);
         Stato := RUNNING;
     ELSIF FB_Ricevi.bError OR timer_ack.Q THEN
-        (* Timeout o errore ricezione — produzione non bloccata *)
+        (* ACK non ricevuto (timeout o errore ricezione).
+           Il pick è già confermato — produzione NON bloccata.
+           Nota: NON andare a CHIUDI_RICONNETTI qui: se il socket è davvero
+           rotto, lo rileva FB_Spedisci al prossimo pick (stato 2 → stato 3).
+           Andare a CHIUDI_RICONNETTI su ogni errore ACK causerebbe 3s di fermo
+           per ogni pick su robot che non invia ACK. *)
+        IF FB_Ricevi.bError THEN
+            ultimo_errore_id := FB_Ricevi.nErrId;
+        END_IF
         n_ack_timeout := n_ack_timeout + 1;
         timer_ack(IN:=FALSE);
-        IF FB_Ricevi.bError THEN
-            (* Errore socket grave → riconnetti *)
-            ultimo_errore_id := FB_Ricevi.nErrId;
-            Stato := CHIUDI_RICONNETTI;
-        ELSE
-            (* Solo timeout — continua (robot potrebbe non inviare ACK) *)
-            Stato := RUNNING;
-        END_IF
+        Stato := RUNNING;
     END_IF
 END_IF
 
@@ -278,10 +279,13 @@ IF NOT ABIL_ROBOT THEN Stato := 99; END_IF
 
 END_CASE
 
-(* Diagnostica task *)
-IF SystemTaskInfoArr[3].lastExecTime > max_time_task THEN
-    max_time_task := SystemTaskInfoArr[3].lastExecTime;
+(* Diagnostica task
+   NOTA: indice SystemTaskInfoArr dipende dall'ordine di creazione task nel System Manager.
+   Con architettura standard: [1]=Input_Output, [2]=Gestione_Robot, [3]=Elaboration.
+   Verificare e aggiustare l'indice sul progetto reale se necessario. *)
+IF SystemTaskInfoArr[2].lastExecTime > max_time_task THEN
+    max_time_task := SystemTaskInfoArr[2].lastExecTime;
 END_IF
-IF SystemTaskInfoArr[3].cycleTimeExceeded THEN
+IF SystemTaskInfoArr[2].cycleTimeExceeded THEN
     count_exceed := count_exceed + 1;
 END_IF

@@ -33,6 +33,7 @@ VAR
 
     (* --- Timer iniezione --- *)
     timer_inj           : TON;
+    timer_inj_pt        : TIME;   (* PT calcolato da SIM_INTERVALLO_S — REAL_TO_TIME non esiste in TC2 *)
     in_timer_inj        : BOOL := TRUE;
 
     (* --- Stato burst --- *)
@@ -42,7 +43,7 @@ VAR
 
     (* --- Round-robin --- *)
     mat_corrente        : INT  := 0;
-    MATERIALI_SIM       : ARRAY[0..3] OF INT := [0, 1, 2, 3];  (* indici materiali *)
+    MATERIALI_SIM       : ARRAY[0..3] OF INT := (0, 1, 2, 3);  (* indici materiali — sintassi IEC 61131-3 *)
 
     (* --- Oggetto simulato --- *)
     obj_sim             : OBJ_PICK;
@@ -101,9 +102,10 @@ END_IF
 (* ================================================================
    MODO 0 e 1 — Timer regolare
    ================================================================ *)
-timer_inj(IN:=in_timer_inj,
-          PT:=REAL_TO_TIME(SIM_INTERVALLO_S * 1000.0),
-          Q=>);
+(* REAL_TO_TIME non esiste in TC2: TIME è DWORD interno (ms).
+   Conversione: REAL(secondi) × 1000 → DWORD(ms) → TIME *)
+timer_inj_pt := DWORD_TO_TIME(REAL_TO_DWORD(SIM_INTERVALLO_S * 1000.0));
+timer_inj(IN:=in_timer_inj, PT:=timer_inj_pt, Q=>);
 IF timer_inj.Q THEN
     in_timer_inj := FALSE;
 END_IF
