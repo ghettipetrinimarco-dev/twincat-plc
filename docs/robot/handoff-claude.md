@@ -44,7 +44,7 @@ robot/
 
 Analisi:
 
-- `gestionerobot.txt` e' vuoto
+- `gestionerobot.txt` ora contiene una bozza PickMaster/UserHook TCP recuperata da Claude
 - `sensoreNIR.txt` contiene un tentativo parziale di generare stringhe target robot
 - `gestioneencoder.txt` e `processing.txt` sono versioni ridotte/vecchie rispetto a `src/`
 
@@ -55,6 +55,21 @@ Il vecchio tentativo costruisce stringhe tipo:
 ```
 
 ma lo fa per singola traccia NIR, non per oggetto fisico.
+
+`gestionerobot.txt` spiega chi leggeva/inviava `String_ToSend`:
+
+```text
+PLC -> PickMaster TCP: start progetto
+PLC -> UserHook TCP: invio String_ToSend su fronte Trig
+PLC -> PickMaster TCP: stop progetto
+```
+
+Non va importato pari pari perche':
+
+- usa lo stesso nome `PROGRAM Gestione_Robot`
+- manca `END_PROGRAM`
+- usa globali mancanti `IP_PICKMASTER`, `PORT_PICKMASTER`, `IP_USERHOOK`, `PORT_USERHOOK`, `String_ToSend`, `Trig`
+- non gestisce ACK/DONE/FAIL
 
 ## Diagnosi Codex
 
@@ -92,13 +107,14 @@ Leggere in questo ordine:
 
 1. `docs/robot/sintesi-operativa.md`
 2. `docs/robot/analisi-preliminare.md`
-3. `docs/robot/mvp-tecnico.md`
-4. `docs/robot/fase-1-specifica-implementazione.md`
-5. `docs/robot/scaffold-st-note-integrazione.md`
-6. `docs/robot/verifica-statica-scaffold.md`
-7. `docs/robot/comando-robot-da-target.md`
-8. `docs/robot/checklist-prima-compilazione.md`
-9. `docs/robot/pacchetto-import-twincat.md`
+3. `docs/robot/analisi-gestionerobot-pickmaster.md`
+4. `docs/robot/mvp-tecnico.md`
+5. `docs/robot/fase-1-specifica-implementazione.md`
+6. `docs/robot/scaffold-st-note-integrazione.md`
+7. `docs/robot/verifica-statica-scaffold.md`
+8. `docs/robot/comando-robot-da-target.md`
+9. `docs/robot/checklist-prima-compilazione.md`
+10. `docs/robot/pacchetto-import-twincat.md`
 
 Per dati mancanti:
 
@@ -123,6 +139,7 @@ File:
 | `ROBOT_OBJECT_BUILDER.EXP` | Crea target da gruppi di tracce NIR |
 | `ROBOT_QUEUE.EXP` | Tracking target e finestra presa |
 | `GESTIONE_ROBOT.EXP` | Simulatore robot |
+| `ROBOT_COMMAND_STRING_BUILDER.EXP` | Builder opzionale stringa `@...#` |
 | `ROBOT_TEST_INPUT.EXP` | Generatore target manuale senza NIR |
 
 Stato:

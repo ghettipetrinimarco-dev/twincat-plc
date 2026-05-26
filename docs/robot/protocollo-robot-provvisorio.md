@@ -10,6 +10,21 @@ Questo documento non certifica che il robot reale usi davvero questo protocollo.
 
 ## Evidenza trovata nel codice
 
+Aggiornamento:
+
+```text
+robot/gestionerobot.txt
+```
+
+contiene una bozza di comunicazione TCP verso:
+
+- PickMaster
+- UserHook
+
+Il programma invia `String_ToSend` al socket UserHook sul fronte di `Trig`.
+
+Questo conferma che il vecchio `String_ToSend` non era solo una variabile locale: era pensato per essere spedito al sistema robot.
+
 In `robot/sensoreNIR.txt` sono presenti:
 
 ```st
@@ -243,4 +258,3 @@ Questa variante e' meno elegante ma puo' essere piu' semplice se il controller r
 Per Fase 1 usare questo protocollo solo come formato di debug/simulazione.
 
 Non collegarlo al robot reale finche' non abbiamo conferma del controller.
-

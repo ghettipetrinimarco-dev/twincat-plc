@@ -10,12 +10,12 @@ La cartella `robot/` aggiunta contiene un tentativo vecchio/parziale:
 
 - `sensoreNIR.txt` prova a costruire stringhe target per robot
 - `gestioneencoder.txt` e `processing.txt` sono versioni ridotte/vecchie dei POU esistenti
-- `gestionerobot.txt` e' vuoto
+- `gestionerobot.txt` contiene ora una bozza PickMaster/UserHook TCP recuperata da Claude
 
 Conclusione:
 
 ```text
-non esiste ancora un programma robot funzionante nel materiale ricevuto
+non esiste ancora un programma robot funzionante importabile pari pari
 ```
 
 Pero' il progetto attuale contiene gia' la parte piu' importante da riusare:
@@ -45,8 +45,8 @@ Ma il tentativo ha problemi strutturali:
 - non usa l'encoder in modo robusto per il robot
 - non gestisce finestra di presa
 - non gestisce ready/busy/ack/done/fail del robot
-- non contiene il programma `Gestione_Robot`
-- usa variabili non presenti nel repo attuale (`X_BOX`, `String_ToSend`, `Trig`, ecc.)
+- il `Gestionerobot` recuperato usa variabili non presenti nel repo attuale (`IP_PICKMASTER`, `PORT_PICKMASTER`, `IP_USERHOOK`, `PORT_USERHOOK`, `String_ToSend`, `Trig`, ecc.)
+- il `Gestionerobot` recuperato non gestisce ACK/DONE/FAIL e confligge col nome del nostro simulatore
 
 ## Direzione corretta
 
@@ -77,6 +77,7 @@ traccia NIR singola -> stringa robot immediata
 | Documento | Scopo |
 |---|---|
 | `analisi-preliminare.md` | Analisi del materiale in `robot/` |
+| `analisi-gestionerobot-pickmaster.md` | Analisi del file PickMaster/UserHook recuperato |
 | `roadmap-implementazione.md` | Roadmap completa verso programma reale |
 | `checklist-dati-mancanti.md` | Dati da recuperare in azienda |
 | `mvp-tecnico.md` | Primo MVP tecnico |
@@ -102,6 +103,7 @@ File:
 | `ROBOT_OBJECT_BUILDER.EXP` | Crea target da NIR |
 | `ROBOT_QUEUE.EXP` | Avanza target e finestra presa |
 | `GESTIONE_ROBOT.EXP` | Simulatore robot |
+| `ROBOT_COMMAND_STRING_BUILDER.EXP` | Builder opzionale stringa comando |
 | `ROBOT_TEST_INPUT.EXP` | Crea target manuale senza NIR |
 
 Stato scaffold:
@@ -233,4 +235,3 @@ protocollo robot reale
 ```
 
 Questo riduce il rischio e permette di capire presto se la logica target funziona.
-

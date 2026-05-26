@@ -158,13 +158,34 @@ Filtrare:
 
 ## P3 - Protocollo robot reale
 
+### P3.0 - Analisi PickMaster/UserHook recuperata
+
+Usare:
+
+```text
+robot/gestionerobot.txt
+docs/robot/analisi-gestionerobot-pickmaster.md
+```
+
+per progettare un nuovo POU:
+
+```text
+Robot_PickMasterDriver
+```
+
+Nota:
+
+```text
+non importare robot/gestionerobot.txt pari pari: e' materiale storico e confligge col nome Gestione_Robot
+```
+
 ### P3.1 - Recuperare protocollo
 
 Servono:
 
-- manuale robot/controller
-- canale comunicazione
-- formato comando
+- IP/porta PickMaster
+- IP/porta UserHook
+- formato esatto `String_ToSend`
 - formato ACK
 - stati ready/busy/error
 

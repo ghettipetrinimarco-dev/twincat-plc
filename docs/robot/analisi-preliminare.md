@@ -13,11 +13,11 @@ File presenti:
 | `robot/sensoreNIR.txt` | Structured Text, 760 righe | Versione modificata di `Sensore_NIR` con primo tentativo di generare stringhe target robot |
 | `robot/gestioneencoder.txt` | Structured Text, 115 righe | Versione ridotta/vecchia di `Gestione_Encoder` |
 | `robot/processing.txt` | Structured Text, 212 righe | Versione ridotta di `Processing`, senza Modbus 4.0 e senza logica licenza completa |
-| `robot/gestionerobot.txt` | Vuoto | Manca il programma robot vero |
+| `robot/gestionerobot.txt` | Structured Text, 183 righe | Bozza comunicazione PickMaster/UserHook TCP recuperata da Claude |
 
 ## Sintesi veloce
 
-Il materiale nella cartella `robot` non contiene un progetto robot completo.
+Il materiale nella cartella `robot` non contiene un progetto robot completo importabile pari pari.
 
 Contiene un tentativo parziale dentro `sensoreNIR.txt`:
 
@@ -28,6 +28,19 @@ Contiene un tentativo parziale dentro `sensoreNIR.txt`:
 - pilota `Out_1 := Trig`
 
 Questa e' una traccia utile, ma non e' ancora una "mente" robotica.
+
+Aggiornamento: `gestionerobot.txt` spiega il probabile destinatario di `String_ToSend`.
+
+```text
+String_ToSend -> socket TCP UserHook
+comandi start/stop -> socket TCP PickMaster
+```
+
+Vedere:
+
+```text
+docs/robot/analisi-gestionerobot-pickmaster.md
+```
 
 ## Vecchio tentativo trovato
 
@@ -82,16 +95,24 @@ IF Ritardo_Trig.Q THEN Trig:=FALSE; END_IF;
 
 ## Problemi tecnici del vecchio tentativo
 
-### 1. `gestionerobot.txt` e' vuoto
+### 1. `gestionerobot.txt` e' materiale storico non importabile direttamente
 
-Manca il programma che dovrebbe:
+Il file recuperato contiene una bozza che:
 
-- leggere `String_ToSend[]`
-- comunicare con robot o PC robot
-- gestire stato robot pronto/occupato/errore
-- gestire ACK ricezione comando
-- gestire pick riuscito/fallito
-- evitare doppio invio dello stesso target
+- si connette a PickMaster
+- invia comando avvio progetto
+- si connette a UserHook
+- invia `String_ToSend` sul fronte di `Trig`
+- chiude UserHook/PickMaster
+
+Non e' pero' importabile direttamente perche':
+
+- usa lo stesso nome `PROGRAM Gestione_Robot`
+- manca `END_PROGRAM`
+- usa globali non presenti nel repo attuale
+- non gestisce ACK ricezione comando
+- non gestisce pick riuscito/fallito
+- non evita doppi invii in modo robusto rispetto alla nostra coda target
 
 ### 2. Variabili globali mancanti
 
@@ -109,6 +130,10 @@ Nel repo attuale non sono definite queste variabili usate da `robot/sensoreNIR.t
 | `Y_BOX` | Coordinate Y deposito per box |
 | `Z_BOX` | Coordinate Z deposito per box |
 | `ATTESA_DEPOSITO` | Tempo attesa deposito |
+| `IP_PICKMASTER` | IP del servizio PickMaster |
+| `PORT_PICKMASTER` | Porta TCP PickMaster |
+| `IP_USERHOOK` | IP del servizio UserHook |
+| `PORT_USERHOOK` | Porta TCP UserHook |
 | `String_ToSend` | Buffer stringhe da inviare al robot |
 | `Trig` | Trigger di invio verso robot o sistema esterno |
 | `TRIG_DELAY_RESET` | Tempo dopo cui resettare `Trig` |
@@ -372,4 +397,3 @@ La base corretta e' il progetto attuale in `src/`, piu' un nuovo layer robot com
 ```text
 NIR scans -> oggetti -> coda target -> tracking encoder -> comando robot -> feedback
 ```
-

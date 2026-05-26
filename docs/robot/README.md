@@ -10,9 +10,10 @@ Per farsi un quadro rapido:
 
 1. `sintesi-operativa.md`
 2. `analisi-preliminare.md`
-3. `mvp-tecnico.md`
-4. `fase-1-specifica-implementazione.md`
-5. `scaffold-st-note-integrazione.md`
+3. `analisi-gestionerobot-pickmaster.md`
+4. `mvp-tecnico.md`
+5. `fase-1-specifica-implementazione.md`
+6. `scaffold-st-note-integrazione.md`
 
 Per andare in azienda e recuperare dati:
 
@@ -40,6 +41,7 @@ Per confrontarsi con Claude o riprendere il lavoro:
 |---|---|---|
 | `sintesi-operativa.md` | Subito | Riassunto decisionale: cosa c'e', cosa manca, cosa fare |
 | `analisi-preliminare.md` | Subito dopo | Analisi dei file ricevuti in `robot/` |
+| `analisi-gestionerobot-pickmaster.md` | Dopo aggiornamento Claude | Analisi PickMaster/UserHook e come si collega al nuovo scaffold |
 | `roadmap-implementazione.md` | Pianificazione | Roadmap completa verso macchina reale |
 | `checklist-dati-mancanti.md` | In officina/azienda | Dati da recuperare su robot, quote, protocolli, safety |
 | `mvp-tecnico.md` | Prima di scrivere codice | Requisiti del primo MVP |

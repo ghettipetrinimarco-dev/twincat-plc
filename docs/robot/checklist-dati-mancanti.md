@@ -10,7 +10,7 @@ Questa checklist serve per trasformare il prototipo attuale in un programma real
 |---|---|---|---|
 | Marca e modello robot | Mancante | Capire area lavoro, protocolli e limiti | Targhetta robot/controller, manuale, foto quadro |
 | Controller robot | Mancante | Sapere chi esegue cinematica e traiettorie | Foto controller, software usato, manuale |
-| Protocollo comunicazione | Mancante | Scrivere `Gestione_Robot` | Manuale controller o progetto vecchio |
+| Protocollo comunicazione | Parzialmente trovato | Scrivere driver reale | `gestionerobot.txt` indica PickMaster/UserHook TCP |
 | Formato comando pick | Mancante | Costruire messaggio target corretto | Esempio funzionante o documentazione |
 | Formato risposta/ACK | Mancante | Evitare doppi invii e target persi | Log, manuale o test con robot |
 | Segnali ready/busy/error | Mancante | Non inviare target quando robot non puo' prenderli | I/O mapping, protocollo o HMI robot |
@@ -59,8 +59,8 @@ Questa checklist serve per trasformare il prototipo attuale in un programma real
 
 | File/progetto | Perche' serve |
 |---|---|
-| GVL robot del vecchio prototipo | Contiene variabili mancanti come `X_BOX`, `Trig`, `String_ToSend` |
-| Programma `GestioneRobot` originale | Il file attuale e' vuoto |
+| GVL robot del vecchio prototipo | Contiene variabili mancanti come `IP_PICKMASTER`, `PORT_PICKMASTER`, `IP_USERHOOK`, `PORT_USERHOOK`, `X_BOX`, `Trig`, `String_ToSend` |
+| Programma `GestioneRobot` originale | Recuperato parzialmente in `robot/gestionerobot.txt`; serve versione completa/compilabile |
 | Progetto robot/controller | Capire protocollo e formato target |
 | Manuale controller robot | Implementare comunicazione corretta |
 | Backup TwinCAT completo del prototipo | Verificare mapping I/O e task |
@@ -81,13 +81,12 @@ Questa checklist serve per trasformare il prototipo attuale in un programma real
 ## Domande secche da fare al tecnico/produttore
 
 1. Il robot riceve comandi via stringa `@...#`?
-2. Se si', su quale canale: TCP, UDP, seriale, file, altro?
+2. Confermi che il canale e' ABB PickMaster/UserHook TCP?
 3. Il robot manda un ACK?
 4. Cosa significano i campi della stringa vecchia?
 5. Le coordinate sono in mm?
 6. `indice` nel vecchio codice era davvero X laterale o solo numero traccia?
 7. `index_nir*SCAN_DISTANCE+DISTANCE_OFFSET` era temporaneo o usato in macchina?
 8. Che cosa doveva fare `Trig`?
-9. `String_ToSend[]` chi lo leggeva?
-10. Perche' `GestioneRobot.txt` e' vuoto?
-
+9. `String_ToSend[]` era una singola stringa, array di stringhe o buffer byte?
+10. Quali sono IP/porte di PickMaster e UserHook?
