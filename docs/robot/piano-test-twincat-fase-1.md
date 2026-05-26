@@ -219,7 +219,7 @@ ROBOT_COMMAND_ID = ROBOT_CURRENT_TARGET.Id
 ROBOT_COMMAND_PICK_X = ROBOT_CURRENT_TARGET.PickX
 ROBOT_COMMAND_DROP_X = X_BOX[ROBOT_CURRENT_TARGET.BoxIndex]
 ROBOT_COMMAND_SENT TRUE per un ciclo
-ROBOT_COMMAND_STRING contiene formato @...#
+ROBOT_COMMAND_STRING resta vuota se `Robot_CommandStringBuilder` non e' importato
 ```
 
 Se fallisce:
@@ -227,7 +227,7 @@ Se fallisce:
 - verificare ordine task: `Robot_Queue()` prima di `Gestione_Robot()`
 - verificare che `ROBOT_STATE_GLOBAL.Ready` sia TRUE
 - verificare che il target non sia gia' `Sent`
-- se manca la stringa ma i campi `ROBOT_COMMAND_*` sono corretti, il problema e' nella conversione stringa
+- se serva la stringa, importare `Robot_CommandStringBuilder` solo dopo il test core
 
 ## Test 4 - Pick simulato
 

@@ -97,7 +97,7 @@ Con un solo valore istantaneo si rischia di perdere impulsi tra due cicli della 
 
 ### Comando robot osservabile
 
-`Gestione_Robot` genera `ROBOT_COMMAND_STRING` quando accetta un `ROBOT_TARGET_REQUEST`.
+`Gestione_Robot` genera i campi numerici del comando quando accetta un `ROBOT_TARGET_REQUEST`.
 
 Formato:
 
@@ -114,6 +114,7 @@ Il comando usa:
 `ROBOT_COMMAND_SENT` e' un impulso di un ciclo.
 
 `ROBOT_COMMAND_READY` segnala che la stringa del ciclo corrente e' valida.
+Nel core robot significa che i campi numerici sono validi.
 
 Oltre alla stringa, `Gestione_Robot` popola campi comando numerici:
 
@@ -126,8 +127,16 @@ ROBOT_COMMAND_DROP_X/Y/Z
 Motivo:
 
 ```text
-se REAL_TO_STRING crea problemi al compile, i campi numerici restano verificabili in watch
+il core robot non dipende da REAL_TO_STRING
 ```
+
+La stringa completa `@...#` viene costruita dal POU opzionale:
+
+```text
+Robot_CommandStringBuilder
+```
+
+Questo POU va importato solo dopo avere compilato e testato il core robot.
 
 ### Reset operativo
 
@@ -230,7 +239,7 @@ evitare conversione `INT_TO_TIME` nella prima compilazione
 
 ### Stringa comando
 
-`ROBOT_COMMAND_STRING` e `command_tail` usano:
+`ROBOT_COMMAND_STRING` e il POU opzionale `Robot_CommandStringBuilder` usano:
 
 ```st
 STRING(150)

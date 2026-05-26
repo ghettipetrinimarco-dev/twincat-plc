@@ -8,7 +8,8 @@ Scopo:
 - costruire target da scan NIR
 - creare target manuali di test con `Robot_TestInput`
 - tracciare target con encoder
-- generare `ROBOT_COMMAND_STRING` in formato storico `@...#`
+- generare campi comando numerici osservabili in watch
+- generare `ROBOT_COMMAND_STRING` con `Robot_CommandStringBuilder` opzionale
 - resettare coda e contatori con `ROBOT_RESET_REQUEST`
 - simulare un robot ready/busy/picked
 

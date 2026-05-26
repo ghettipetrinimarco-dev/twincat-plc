@@ -20,6 +20,18 @@ src/Robot/ROBOT_QUEUE.EXP
 src/Robot/GESTIONE_ROBOT.EXP
 ```
 
+Non importare nel primo compile:
+
+```text
+src/Robot/ROBOT_COMMAND_STRING_BUILDER.EXP
+```
+
+Motivo:
+
+```text
+usa REAL_TO_STRING; va testato solo dopo il core robot
+```
+
 Poi integrare la modifica in:
 
 ```text
@@ -110,7 +122,7 @@ Z_BOX[1] := 300.0
 3. Forzare `ROBOT_TEST_CREATE_TARGET := TRUE`.
 4. Verificare `ROBOT_TARGETS_DETECTED`.
 5. Attendere ingresso in finestra.
-6. Verificare `ROBOT_COMMAND_STRING`.
+6. Verificare `ROBOT_COMMAND_ID`, `ROBOT_COMMAND_PICK_X` e `ROBOT_COMMAND_DROP_X`.
 7. Verificare `ROBOT_TARGETS_PICKED` oppure `ROBOT_TARGETS_MISSED`.
 
 ## Cosa riportare se fallisce
@@ -123,7 +135,7 @@ file e riga
 fase del test
 valori watch principali
 se ROBOT_RESET_REQUEST torna FALSE
-se ROBOT_COMMAND_STRING resta vuota
+se ROBOT_COMMAND_ID resta 0
 ```
 
 Con questi dati si puo' correggere in modo mirato senza tentativi casuali.

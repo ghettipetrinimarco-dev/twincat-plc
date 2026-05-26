@@ -6,7 +6,6 @@ VAR
 	pick_timer : TON;
 	timer_active : BOOL;
 	command_box_index : INT;
-	command_tail : STRING(150);
 END_VAR
 
 ROBOT_SIM_PICK_DONE := FALSE;
@@ -63,18 +62,7 @@ ELSE
 			ROBOT_COMMAND_DROP_Y := Y_BOX[command_box_index];
 			ROBOT_COMMAND_DROP_Z := Z_BOX[command_box_index];
 			ROBOT_COMMAND_WAIT_DROP_MS := ROBOT_WAIT_DROP_MS;
-			ROBOT_COMMAND_STRING := CONCAT('@', INT_TO_STRING(ROBOT_CURRENT_TARGET.Id));
-			command_tail := CONCAT(',', REAL_TO_STRING(ROBOT_COMMAND_PICK_X));
-			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(ROBOT_COMMAND_PICK_Y)));
-			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(ROBOT_COMMAND_PICK_Z)));
-			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(ROBOT_COMMAND_PICK_ANGLE)));
-			command_tail := CONCAT(command_tail, CONCAT(',', INT_TO_STRING(ROBOT_COMMAND_WAIT_PICK_MS)));
-			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(ROBOT_COMMAND_DROP_X)));
-			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(ROBOT_COMMAND_DROP_Y)));
-			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(ROBOT_COMMAND_DROP_Z)));
-			command_tail := CONCAT(command_tail, CONCAT(',', INT_TO_STRING(ROBOT_COMMAND_WAIT_DROP_MS)));
-			command_tail := CONCAT(command_tail, ',#');
-			ROBOT_COMMAND_STRING := CONCAT(ROBOT_COMMAND_STRING, command_tail);
+			ROBOT_COMMAND_STRING := '';
 			ROBOT_COMMAND_READY := TRUE;
 			ROBOT_COMMAND_SENT := TRUE;
 			timer_active := TRUE;

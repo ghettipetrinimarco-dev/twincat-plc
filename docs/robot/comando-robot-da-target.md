@@ -83,7 +83,7 @@ ROBOT_COMMAND_READY
 ROBOT_COMMAND_SENT
 ```
 
-`Gestione_Robot` aggiorna `ROBOT_COMMAND_STRING` quando riceve `ROBOT_TARGET_REQUEST`.
+`Gestione_Robot` aggiorna i campi comando numerici quando riceve `ROBOT_TARGET_REQUEST`.
 
 Espone anche campi numerici osservabili:
 
@@ -96,11 +96,18 @@ ROBOT_COMMAND_DROP_X/Y/Z
 ROBOT_COMMAND_WAIT_DROP_MS
 ```
 
-Questi campi permettono di testare il comando anche se la conversione stringa non compila o va sostituita.
+Questi campi permettono di testare il comando senza dipendere dalla conversione stringa.
 
-Da valutare dopo compilazione TwinCAT:
+La stringa completa viene costruita dal POU opzionale:
 
 ```text
+Robot_CommandStringBuilder
+```
+
+Da valutare dopo compilazione del core TwinCAT:
+
+```text
+ROBOT_COMMAND_STRING
 INT_TO_STRING
 REAL_TO_STRING
 CONCAT annidati lunghi
@@ -117,13 +124,21 @@ Generare solo target, coda e simulazione.
 
 ### Fase 2
 
-Osservare la stringa comando in watch:
+Osservare prima i campi numerici comando in watch:
+
+```text
+ROBOT_COMMAND_ID
+ROBOT_COMMAND_PICK_X
+ROBOT_COMMAND_DROP_X
+```
+
+Solo dopo aggiungere la stringa comando:
 
 ```text
 ROBOT_COMMAND_STRING
 ```
 
-La stringa si aggiorna quando `Robot_Queue` mette un target in `ROBOT_CURRENT_TARGET` e `Gestione_Robot` accetta la richiesta.
+La stringa si aggiorna se `Robot_CommandStringBuilder` e' importato ed eseguito dopo `Gestione_Robot`.
 
 ### Fase 3
 
