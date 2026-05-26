@@ -70,6 +70,13 @@ ROBOT_TARGETS[0].Missed
 ROBOT_ENCODER_STEP_VALID
 ROBOT_ENCODER_STEP_IMP
 ROBOT_ENCODER_PENDING_IMP
+ROBOT_COMMAND_ID
+ROBOT_COMMAND_PICK_X
+ROBOT_COMMAND_PICK_Y
+ROBOT_COMMAND_PICK_Z
+ROBOT_COMMAND_DROP_X
+ROBOT_COMMAND_DROP_Y
+ROBOT_COMMAND_DROP_Z
 ROBOT_COMMAND_STRING
 ROBOT_COMMAND_READY
 ROBOT_COMMAND_SENT
@@ -208,6 +215,9 @@ ROBOT_TARGET_REQUEST TRUE per un ciclo
 ROBOT_TARGETS_SENT incrementa
 ROBOT_TARGETS[0].Sent = TRUE
 ROBOT_CURRENT_TARGET.Id = ROBOT_TARGETS[0].Id
+ROBOT_COMMAND_ID = ROBOT_CURRENT_TARGET.Id
+ROBOT_COMMAND_PICK_X = ROBOT_CURRENT_TARGET.PickX
+ROBOT_COMMAND_DROP_X = X_BOX[ROBOT_CURRENT_TARGET.BoxIndex]
 ROBOT_COMMAND_SENT TRUE per un ciclo
 ROBOT_COMMAND_STRING contiene formato @...#
 ```
@@ -217,7 +227,7 @@ Se fallisce:
 - verificare ordine task: `Robot_Queue()` prima di `Gestione_Robot()`
 - verificare che `ROBOT_STATE_GLOBAL.Ready` sia TRUE
 - verificare che il target non sia gia' `Sent`
-- se manca la stringa, verificare conversioni `INT_TO_STRING` e `REAL_TO_STRING`
+- se manca la stringa ma i campi `ROBOT_COMMAND_*` sono corretti, il problema e' nella conversione stringa
 
 ## Test 4 - Pick simulato
 

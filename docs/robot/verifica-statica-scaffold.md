@@ -115,6 +115,20 @@ Il comando usa:
 
 `ROBOT_COMMAND_READY` segnala che la stringa del ciclo corrente e' valida.
 
+Oltre alla stringa, `Gestione_Robot` popola campi comando numerici:
+
+```text
+ROBOT_COMMAND_ID
+ROBOT_COMMAND_PICK_X/Y/Z
+ROBOT_COMMAND_DROP_X/Y/Z
+```
+
+Motivo:
+
+```text
+se REAL_TO_STRING crea problemi al compile, i campi numerici restano verificabili in watch
+```
+
 ### Reset operativo
 
 `Robot_Queue` gestisce `ROBOT_RESET_REQUEST`.

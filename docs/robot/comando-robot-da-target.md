@@ -85,6 +85,19 @@ ROBOT_COMMAND_SENT
 
 `Gestione_Robot` aggiorna `ROBOT_COMMAND_STRING` quando riceve `ROBOT_TARGET_REQUEST`.
 
+Espone anche campi numerici osservabili:
+
+```text
+ROBOT_COMMAND_ID
+ROBOT_COMMAND_PICK_X/Y/Z
+ROBOT_COMMAND_PICK_ANGLE
+ROBOT_COMMAND_WAIT_PICK_MS
+ROBOT_COMMAND_DROP_X/Y/Z
+ROBOT_COMMAND_WAIT_DROP_MS
+```
+
+Questi campi permettono di testare il comando anche se la conversione stringa non compila o va sostituita.
+
 Da valutare dopo compilazione TwinCAT:
 
 ```text
