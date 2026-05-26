@@ -1,0 +1,173 @@
+PROGRAM Gestione_Robot
+VAR CONSTANT
+	CONNESSIONE_PICKMASTER: INT:= 0;
+	AVVIO_PROGETTO:INT := 1;
+	CONNESSIONE_USERHOOK:INT:= 2;
+	RUNNING: INT := 3;
+	CHIUDI_USERHOOK: INT := 4;
+	ARRESTA_PROGETTO: INT := 5;
+	CHIUDI_PICKMASTER:INT := 6;
+
+	PICKMASTER_TIMEOUT: TIME:= T#10s;
+
+	CMD_AVVIA_PROGETTO: ARRAY [0..1] OF BYTE:=16#0,16#13;
+	CMD_ARRESTA_PROGETTO: ARRAY [0..1] OF BYTE:=16#0,16#14;
+
+END_VAR
+VAR
+	PE_Trig:R_TRIG;
+	(*Pickmaster SOCKET*)
+	FB_Connessione_Pickmaster: FB_SocketConnect;
+	hSocket_Pickmaster: T_HSOCKET;
+	FB_Spedisci_Pickmaster: FB_SocketSend;
+	FB_Ricevi_Pickmaster: FB_SocketReceive;
+	FB_Chiudi_Pickmaster: FB_SocketClose;
+
+	(*Userhook SOCKET*)
+	FB_Connessione_Userhook: FB_SocketConnect;
+	hSocket_Userhook: T_HSOCKET;
+	FB_Spedisci_Userhook: FB_SocketSend;
+	FB_Ricevi_Userhook: FB_SocketReceive;
+	FB_Chiudi_Userhook: FB_SocketClose;
+	Aux_ricevi:BOOL;
+	Stato: INT:= 0;
+	send_data:BOOL;
+END_VAR
+
+
+CASE Stato OF
+
+(*Connessione Pickmaster*)
+0:
+FB_Connessione_Pickmaster(
+	sSrvNetId:= '',
+	sRemoteHost :=IP_PICKMASTER ,
+	nRemotePort:= PORT_PICKMASTER,
+	bExecute:= TRUE,
+	tTimeout:=PICKMASTER_TIMEOUT ,
+	bBusy=> ,
+	bError=> ,
+	nErrId=> ,
+	hSocket=>hSocket_Pickmaster);
+FB_Connessione_Pickmaster(bExecute:= FALSE,);
+IF NOT FB_Connessione_Pickmaster.bBusy AND NOT FB_Connessione_Pickmaster.bError AND hSocket_Pickmaster.handle <> 0 THEN
+	Stato:= AVVIO_PROGETTO;
+ELSE
+	Stato := CHIUDI_PICKMASTER;
+END_IF
+
+(*Spedisci AVVIO PROGETTO*)
+1:
+FB_Spedisci_Pickmaster(
+	sSrvNetId:= '',
+	hSocket:= hSocket_Pickmaster ,
+	cbLen:=SIZEOF(CMD_AVVIA_PROGETTO) ,
+	pSrc:= ADR(CMD_AVVIA_PROGETTO),
+	bExecute:= TRUE,
+	tTimeout:=PICKMASTER_TIMEOUT ,
+	bBusy=> ,
+	bError=> ,
+	nErrId=> );
+FB_Spedisci_Pickmaster(bExecute:= FALSE,);
+IF NOT FB_Spedisci_Pickmaster.bBusy AND NOT FB_Spedisci_Pickmaster.bError THEN
+	Stato := CONNESSIONE_USERHOOK;
+ELSE
+	stato := CHIUDI_PICKMASTER;
+END_IF
+
+(*Connessione UserHook*)
+2:
+FB_Connessione_Userhook(
+	sSrvNetId:= '',
+	sRemoteHost:=IP_USERHOOK ,
+	nRemotePort:= PORT_USERHOOK,
+	bExecute:= TRUE,
+	tTimeout:=PICKMASTER_TIMEOUT ,
+	bBusy=> ,
+	bError=> ,
+	hSocket=>hSocket_Userhook);
+FB_Connessione_Userhook(bExecute:= FALSE,);
+IF NOT FB_Connessione_Userhook.bBusy AND NOT FB_Connessione_Userhook.bError AND hSocket_Userhook.handle <> 0 THEN
+	Stato:= RUNNING;
+	send_data:=FALSE;
+ELSE
+	Stato := CHIUDI_USERHOOK;
+END_IF
+
+(* RUNNING: quando Trig sale manda String_ToSend via UserHook *)
+3:
+PE_Trig.CLK:=Trig;
+PE_Trig();
+IF PE_Trig.Q THEN send_data:=TRUE; END_IF
+IF send_data THEN
+	FB_Spedisci_Userhook(
+		sSrvNetId:= '',
+		hSocket:= hSocket_Userhook ,
+		cbLen:=SIZEOF(String_ToSend) ,
+		pSrc:= ADR(String_ToSend),
+		bExecute:= TRUE,
+		tTimeout:=PICKMASTER_TIMEOUT ,
+		bBusy=> ,
+		bError=> ,
+		nErrId=> );
+	FB_Spedisci_Userhook(bExecute:= FALSE,);
+	IF NOT FB_Spedisci_Userhook.bBusy AND NOT FB_Spedisci_Userhook.bError THEN
+		send_data:=FALSE;
+	END_IF
+END_IF
+
+4:(*Chiusura Userhook*)
+FB_Ricevi_Userhook(bExecute:= FALSE);
+Aux_ricevi:=FALSE;
+FB_Chiudi_Userhook(
+	sSrvNetId:='' ,
+	hSocket :=hSocket_Userhook,
+	bExecute:= TRUE,
+	tTimeout:=DEFAULT_ADS_TIMEOUT ,
+	bBusy=> ,
+	bError=> ,
+	nErrId=> );
+IF NOT FB_Chiudi_Userhook.bBusy THEN
+	IF NOT FB_Chiudi_Userhook.bError THEN
+		FB_Chiudi_Userhook(bExecute:= FALSE,);
+		MEMSET( ADR(hSocket_Userhook), 0, SIZEOF(hSocket_Userhook));
+		Stato:=ARRESTA_PROGETTO;
+	END_IF
+END_IF
+
+(*Spedisci ARRESTA PROGETTO*)
+5:
+FB_Spedisci_Pickmaster(
+	sSrvNetId:= '',
+	hSocket:= hSocket_Pickmaster ,
+	cbLen:=SIZEOF(CMD_ARRESTA_PROGETTO) ,
+	pSrc:= ADR(CMD_ARRESTA_PROGETTO),
+	bExecute:= TRUE,
+	tTimeout:=PICKMASTER_TIMEOUT ,
+	bBusy=> ,
+	bError=> ,
+	nErrId=> );
+FB_Spedisci_Pickmaster(bExecute:= FALSE,);
+stato := CHIUDI_PICKMASTER;
+
+(* Chiusura Pickmaster *)
+6:
+FB_Ricevi_Pickmaster(bExecute:= FALSE);
+Aux_ricevi:=FALSE;
+FB_Chiudi_Pickmaster(
+	sSrvNetId:='' ,
+	hSocket:= hSocket_Pickmaster,
+	bExecute:= TRUE,
+	tTimeout:=DEFAULT_ADS_TIMEOUT ,
+	bBusy=> ,
+	bError=> ,
+	nErrId=> );
+IF NOT FB_Chiudi_Pickmaster.bBusy THEN
+	IF NOT FB_Chiudi_Pickmaster.bError THEN
+		FB_Chiudi_Pickmaster(bExecute:= FALSE,);
+		MEMSET( ADR(hSocket_Pickmaster), 0, SIZEOF(hSocket_Pickmaster));
+		Stato:=99;
+	END_IF
+END_IF
+
+END_CASE
