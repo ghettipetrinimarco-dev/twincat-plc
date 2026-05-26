@@ -3,7 +3,7 @@
 (* @OBJECTFLAGS := '0, 8' *)
 TYPE ROBOT_TARGET :
 STRUCT
-	Id : UDINT;
+	Id : INT;
 	MaterialIndex : INT;
 	MaterialCode : BYTE;
 	BoxIndex : INT;

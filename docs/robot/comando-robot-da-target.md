@@ -88,7 +88,7 @@ ROBOT_COMMAND_SENT
 Da valutare dopo compilazione TwinCAT:
 
 ```text
-UDINT_TO_STRING
+INT_TO_STRING
 REAL_TO_STRING
 CONCAT annidati lunghi
 lunghezza massima STRING

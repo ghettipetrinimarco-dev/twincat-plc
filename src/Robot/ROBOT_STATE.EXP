@@ -11,7 +11,7 @@ STRUCT
 	Ack : BOOL;
 	PickDone : BOOL;
 	PickFailed : BOOL;
-	CurrentTargetId : UDINT;
+	CurrentTargetId : INT;
 	ErrorCode : UINT;
 END_STRUCT
 END_TYPE

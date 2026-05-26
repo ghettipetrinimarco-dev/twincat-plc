@@ -202,7 +202,7 @@ Le strutture target devono essere ispezionabili da TwinCAT/HMI:
 ```st
 TYPE ROBOT_TARGET :
 STRUCT
-    Id : UDINT;
+    Id : INT;
     MaterialIndex : INT;
     MaterialCode : BYTE;
     BoxIndex : INT;
@@ -231,7 +231,7 @@ VAR_GLOBAL
     ROBOT_ENABLED : BOOL;
     ROBOT_SIMULATION : BOOL := TRUE;
     ROBOT_TARGETS : ARRAY [0..49] OF ROBOT_TARGET;
-    ROBOT_NEXT_ID : UDINT;
+    ROBOT_NEXT_ID : INT;
     ROBOT_READY : BOOL;
     ROBOT_BUSY : BOOL;
     ROBOT_ERROR : BOOL;
@@ -394,4 +394,3 @@ Prima validazione:
 ```text
 NIR vede materiale attivo -> target appare in ROBOT_TARGETS -> target entra in_window -> simulatore lo marca picked oppure missed
 ```
-

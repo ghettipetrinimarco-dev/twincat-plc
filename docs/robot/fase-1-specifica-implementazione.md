@@ -86,7 +86,7 @@ Variabili minime:
 | `ROBOT_ERROR` | `BOOL` | `FALSE` | Stato robot |
 | `ROBOT_TARGETS` | `ARRAY [0..49] OF ROBOT_TARGET` | - | Coda target |
 | `ROBOT_CURRENT_TARGET` | `ROBOT_TARGET` | - | Target in esecuzione |
-| `ROBOT_NEXT_ID` | `UDINT` | `1` | Progressivo ID |
+| `ROBOT_NEXT_ID` | `INT` | `1` | Progressivo ID |
 | `ROBOT_TARGETS_DETECTED` | `UDINT` | `0` | Contatore |
 | `ROBOT_TARGETS_SENT` | `UDINT` | `0` | Contatore |
 | `ROBOT_TARGETS_PICKED` | `UDINT` | `0` | Contatore |
@@ -381,4 +381,3 @@ il NIR puo' generare target robot tracciati da encoder
 ```
 
 Questo e' il primo passaggio concreto verso una macchina reale.
-

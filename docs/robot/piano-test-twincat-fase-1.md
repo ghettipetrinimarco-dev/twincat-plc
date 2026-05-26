@@ -189,7 +189,7 @@ Se fallisce:
 - verificare ordine task: `Robot_Queue()` prima di `Gestione_Robot()`
 - verificare che `ROBOT_STATE_GLOBAL.Ready` sia TRUE
 - verificare che il target non sia gia' `Sent`
-- se manca la stringa, verificare conversioni `UDINT_TO_STRING` e `REAL_TO_STRING`
+- se manca la stringa, verificare conversioni `INT_TO_STRING` e `REAL_TO_STRING`
 
 ## Test 4 - Pick simulato
 
