@@ -25,6 +25,11 @@ Per lavorare sul codice:
 2. `scaffold-st-note-integrazione.md`
 3. `src/Robot/README.md`
 
+Per confrontarsi con Claude o riprendere il lavoro:
+
+1. `handoff-claude.md`
+2. `backlog-operativo.md`
+
 ## Documenti
 
 | Documento | Quando leggerlo | Contenuto |
@@ -38,6 +43,8 @@ Per lavorare sul codice:
 | `protocollo-robot-provvisorio.md` | Quando si parla col robot | Formato `@...#` dedotto e protocollo consigliato |
 | `scaffold-st-note-integrazione.md` | Prima dell'import TwinCAT | Come importare/testare lo scaffold senza rompere l'esistente |
 | `verifica-statica-scaffold.md` | Prima della compilazione | Controlli fatti e rischi residui TwinCAT |
+| `handoff-claude.md` | Confronto con Claude | Contesto, diagnosi e domande per review |
+| `backlog-operativo.md` | Prossime sessioni | Task ordinati P0-P4 |
 
 ## Stato tecnico
 
@@ -73,4 +80,3 @@ Obiettivo:
 ```text
 target manuale -> coda -> finestra presa -> robot simulato -> picked/missed
 ```
-
