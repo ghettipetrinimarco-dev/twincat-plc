@@ -54,7 +54,7 @@ target -> in_window -> sent -> picked
 
 Correggere eventuali errori su:
 
-- conversione `INDEX_NIR - 1` verso `INT`
+- allineamento `ROBOT_NIR_LAST_INDEX` con `BUFFER_SIZE`
 - variabili `TIME` persistent
 - `STRING(255)`
 - conversioni `REAL_TO_STRING`

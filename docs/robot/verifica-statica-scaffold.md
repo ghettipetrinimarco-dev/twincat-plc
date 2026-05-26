@@ -58,7 +58,6 @@ Riferimenti robot usati solo nello scaffold e nei documenti:
 Riferimenti al progetto esistente usati dallo scaffold:
 
 - `INDEX_NIR`
-- `BUFFER_SIZE`
 - `MSI_data`
 - `NUM_TRACKS_NIR`
 - `NUM_CODICI`
@@ -162,7 +161,7 @@ Legge l'ultimo scan completato:
 
 ```st
 IF INDEX_NIR = 0 THEN
-    scan_index := BUFFER_SIZE;
+    scan_index := ROBOT_NIR_LAST_INDEX;
 ELSE
     scan_index := INDEX_NIR - 1;
 END_IF
@@ -178,16 +177,23 @@ Sensore_NIR incrementa INDEX_NIR dopo avere scritto lo scan
 
 ### Tipo `scan_index`
 
-`scan_index` e `ROBOT_LAST_PROCESSED_NIR_INDEX` sono `INT`.
+`scan_index` e `ROBOT_LAST_PROCESSED_NIR_INDEX` sono `UINT`, come `INDEX_NIR`.
 
 ```st
-scan_index := BUFFER_SIZE;
+ROBOT_NIR_LAST_INDEX : UINT := 150
 ```
 
 Motivo:
 
 ```text
-evitare conversione implicita `BUFFER_SIZE` INT -> `scan_index` UINT
+evitare conversioni implicite tra INDEX_NIR, ultimo indice buffer e scan_index
+```
+
+Nota:
+
+```text
+ROBOT_NIR_LAST_INDEX deve restare allineato a BUFFER_SIZE.
+Oggi BUFFER_SIZE = 150.
 ```
 
 ### Timer simulazione
@@ -217,18 +223,6 @@ evitare dipendenza dalla copia struttura completa `ROBOT_CURRENT_TARGET := ROBOT
 ```
 
 ## Rischi residui da verificare in TwinCAT
-
-### Conversione `INDEX_NIR - 1`
-
-`INDEX_NIR` e' `UINT`, `scan_index` e' `INT`.
-
-Se TwinCAT 2 non accetta:
-
-```st
-scan_index := INDEX_NIR - 1;
-```
-
-usare conversione esplicita accettata dal compilatore o una variabile intermedia.
 
 ### Ordine import
 

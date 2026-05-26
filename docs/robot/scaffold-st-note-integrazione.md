@@ -94,17 +94,17 @@ ROBOT_SIMULATION := TRUE
 
 ## Punti da verificare in TwinCAT
 
-### 1. Tipi e conversioni UINT/INT
+### 1. Indice buffer NIR
 
-`INDEX_NIR` e' `UINT`, `BUFFER_SIZE` e' `INT`.
+`INDEX_NIR`, `scan_index` e `ROBOT_LAST_PROCESSED_NIR_INDEX` sono `UINT`.
 
-Se TwinCAT segnala conversioni implicite, sostituire:
+Per evitare conversioni implicite con `BUFFER_SIZE`, lo scaffold usa:
 
 ```st
-scan_index := BUFFER_SIZE;
+ROBOT_NIR_LAST_INDEX : UINT := 150
 ```
 
-con conversione esplicita accettata da TwinCAT 2.
+Questo valore deve restare uguale a `BUFFER_SIZE`.
 
 ### 2. Array robot
 
@@ -130,6 +130,12 @@ INDEX_NIR - 1
 ```
 
 e se `INDEX_NIR = 0`, legge `BUFFER_SIZE`.
+
+Nello scaffold questo valore e' rappresentato da:
+
+```text
+ROBOT_NIR_LAST_INDEX
+```
 
 ### Tracking simulato
 

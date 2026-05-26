@@ -3,7 +3,7 @@
 (* @OBJECTFLAGS := '0, 8' *)
 PROGRAM Robot_ObjectBuilder
 VAR
-	scan_index : INT;
+	scan_index : UINT;
 	track_index : INT;
 	code_index : INT;
 	slot_index : INT;
@@ -22,7 +22,7 @@ END_VAR
 IF ROBOT_ENABLED THEN
 	(* INDEX_NIR punta al prossimo slot di scrittura: qui leggiamo l'ultimo scan completato. *)
 	IF INDEX_NIR = 0 THEN
-		scan_index := BUFFER_SIZE;
+		scan_index := ROBOT_NIR_LAST_INDEX;
 	ELSE
 		scan_index := INDEX_NIR - 1;
 	END_IF
