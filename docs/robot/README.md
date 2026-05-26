@@ -23,9 +23,10 @@ Per lavorare sul codice:
 
 1. `verifica-statica-scaffold.md`
 2. `scaffold-st-note-integrazione.md`
-3. `piano-test-twincat-fase-1.md`
-4. `comando-robot-da-target.md`
-5. `src/Robot/README.md`
+3. `checklist-prima-compilazione.md`
+4. `piano-test-twincat-fase-1.md`
+5. `comando-robot-da-target.md`
+6. `src/Robot/README.md`
 
 Per confrontarsi con Claude o riprendere il lavoro:
 
@@ -46,6 +47,7 @@ Per confrontarsi con Claude o riprendere il lavoro:
 | `comando-robot-da-target.md` | Prima di implementare invio robot | Mappa campo-per-campo da target PLC a comando robot |
 | `scaffold-st-note-integrazione.md` | Prima dell'import TwinCAT | Come importare/testare lo scaffold senza rompere l'esistente |
 | `verifica-statica-scaffold.md` | Prima della compilazione | Controlli fatti e rischi residui TwinCAT |
+| `checklist-prima-compilazione.md` | Durante primo compile | Errori probabili TwinCAT e correzioni rapide |
 | `piano-test-twincat-fase-1.md` | Durante test TwinCAT | Watch list, passi e risultati attesi |
 | `handoff-claude.md` | Confronto con Claude | Contesto, diagnosi e domande per review |
 | `backlog-operativo.md` | Prossime sessioni | Task ordinati P0-P4 |

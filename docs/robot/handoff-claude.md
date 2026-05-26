@@ -97,6 +97,7 @@ Leggere in questo ordine:
 5. `docs/robot/scaffold-st-note-integrazione.md`
 6. `docs/robot/verifica-statica-scaffold.md`
 7. `docs/robot/comando-robot-da-target.md`
+8. `docs/robot/checklist-prima-compilazione.md`
 
 Per dati mancanti:
 
