@@ -82,12 +82,17 @@ IF SIM_MODO = 2 THEN
             END_IF
             burst_count := burst_count + 1;
         ELSE
-            (* Aspetta il pick di tutti e 8 prima di ripartire *)
-            burst_pausa(IN:=TRUE, PT:=T#5S, Q=>);
-            IF burst_pausa.Q THEN
-                burst_pausa(IN:=FALSE);
-                burst_count := 0;
-            END_IF
+            (* 8 oggetti iniettati → entra in pausa *)
+            in_pausa := TRUE;
+            burst_pausa(IN:=FALSE);  (* reset timer al momento dell'entrata *)
+        END_IF
+    ELSE
+        (* In pausa — attende 5s poi riparte *)
+        burst_pausa(IN:=TRUE, PT:=T#5S, Q=>);
+        IF burst_pausa.Q THEN
+            burst_pausa(IN:=FALSE);
+            in_pausa := FALSE;
+            burst_count := 0;
         END_IF
     END_IF
     RETURN;

@@ -47,6 +47,10 @@ VAR_GLOBAL
     MSI_elab            : ARRAY[0..BUFFER_SIZE] OF RX_NIR_ELAB;
     VISU_TRACK          : ARRAY[1..NUM_TRACKS_NIR] OF INT;
     matrix_visu         : ARRAY[0..BUFFER_VISU, 1..NUM_TRACKS_NIR] OF BYTE;
+    (* Matrici compact per visualizzazione HMI pezzo (25 tracce × 25 scansioni) *)
+    matrix_data         : ARRAY[0..24, 1..25] OF BYTE;
+    matrix_data_bool    : ARRAY[0..24, 1..25] OF BOOL;
+    matrix_data_bool_inq : ARRAY[0..24, 1..25] OF BOOL;
     storico_1           : ARRAY[0..BUFFER_STORICO, 1..NUM_TRACKS_NIR] OF BYTE;
     storico_2           : ARRAY[0..BUFFER_STORICO, 1..NUM_TRACKS_NIR] OF BYTE;
     num_obj             : ARRAY[1..NUM_TRACKS_NIR] OF UDINT;

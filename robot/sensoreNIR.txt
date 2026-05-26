@@ -294,8 +294,6 @@ CASE Stato OF
 					MSI_data[index_nir].Scan_counter_high:=RX_Tmp_MSI[1];
 					MSI_data[index_nir].Scan_counter_middle:=RX_Tmp_MSI[2];
 					MSI_data[index_nir].Scan_counter_low:=RX_Tmp_MSI[3];
-					String_line_tmp:='';
-					First_track:=TRUE;
 					(*Temperatura sensore*)
 					LED_TEMP_NIR:=RX_Tmp_MSI[0].1 OR  (RX_Tmp_MSI[0].6 AND RX_Tmp_MSI[0].4);
 					(*Calibrazione ok sensore*)
@@ -669,7 +667,6 @@ IF fronte_ritardo_linee.Q THEN All_link:=TRUE; END_IF
 IF fronte_ritardo_linee_ok.Q THEN All_link:=FALSE; END_IF
 (*Cancella Errori*)
 IF cancella THEN
-	cancella_espulsione:=TRUE;
 	cancella_encoder:=TRUE;
 	All_dati:=FALSE;
 	All_sens_scoll_1:=FALSE;
