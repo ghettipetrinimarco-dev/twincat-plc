@@ -18,6 +18,7 @@ VAR
 	slot_found : BOOL;
 	is_target : BOOL;
 END_VAR
+(* @END_DECLARATION := '0' *)
 
 IF ROBOT_ENABLED THEN
 	(* INDEX_NIR punta al prossimo slot di scrittura: qui leggiamo l'ultimo scan completato. *)
@@ -38,8 +39,9 @@ IF ROBOT_ENABLED THEN
 
 		FOR track_index := 1 TO NUM_TRACKS_NIR DO
 			is_target := FALSE;
-			FOR code_index := 0 TO NUM_CODICI DO
-				IF MSI_data[scan_index].track[track_index] = CODICI_MATERIALI[code_index] THEN
+			IF MSI_elab[scan_index].track_mat_select[track_index] THEN
+				code_index := MSI_data[scan_index].indice_codice_mat[track_index];
+				IF code_index >= 0 AND code_index <= 100 THEN
 					IF MATERIALI_ATTIVI[code_index] THEN
 						is_target := TRUE;
 						IF NOT group_open THEN
@@ -49,9 +51,8 @@ IF ROBOT_ENABLED THEN
 							current_box_index := MATERIALI_ATTIVI_BOX[code_index];
 						END_IF
 					END_IF
-					EXIT;
 				END_IF
-			END_FOR
+			END_IF
 
 			IF is_target THEN
 				group_open := TRUE;

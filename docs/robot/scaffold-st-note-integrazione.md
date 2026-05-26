@@ -137,6 +137,20 @@ Nello scaffold questo valore e' rappresentato da:
 ROBOT_NIR_LAST_INDEX
 ```
 
+Per decidere se una traccia e' selezionabile, `Robot_ObjectBuilder` usa il flag gia' prodotto dal NIR:
+
+```st
+MSI_elab[scan_index].track_mat_select[track_index]
+```
+
+e usa `MSI_data[scan_index].indice_codice_mat[track_index]` solo per recuperare il materiale e il box.
+
+Motivo:
+
+```text
+il robot deve seguire la selezione elaborata dal sensore, non ricalcolare da zero sul byte grezzo
+```
+
 ### Tracking simulato
 
 Per evitare di contare piu' volte `PASSO_ENCODER` nella task lenta, `Robot_Queue` non usa direttamente `PASSO_ENCODER`.

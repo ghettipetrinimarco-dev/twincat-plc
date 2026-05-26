@@ -38,6 +38,7 @@ src/Robot/ROBOT_TEST_INPUT.EXP
 Controllato che i file principali terminino con:
 
 - `END_PROGRAM` per i PROGRAM
+- `@END_DECLARATION` dopo la dichiarazione dei PROGRAM
 - `END_TYPE` / `@END_DECLARATION` per i TYPE
 - `@OBJECT_END` per la GVL
 
@@ -59,8 +60,8 @@ Riferimenti al progetto esistente usati dallo scaffold:
 
 - `INDEX_NIR`
 - `MSI_data`
+- `MSI_elab`
 - `NUM_TRACKS_NIR`
-- `NUM_CODICI`
 - `CODICI_MATERIALI`
 - `MATERIALI_ATTIVI`
 
@@ -178,7 +179,7 @@ restano utili nei cicli `FOR`, ma non sono piu' usate come bound di array.
 
 ### Lettura ultimo scan NIR
 
-`Robot_ObjectBuilder` non legge direttamente `INDEX_NIR`.
+`Robot_ObjectBuilder` non usa lo slot corrente di `INDEX_NIR`, perche' quello e' lo slot di prossima scrittura.
 
 Legge l'ultimo scan completato:
 
@@ -194,6 +195,34 @@ Motivo:
 
 ```text
 Sensore_NIR incrementa INDEX_NIR dopo avere scritto lo scan
+```
+
+### Selezione NIR gia' elaborata
+
+`Robot_ObjectBuilder` ora usa:
+
+```st
+MSI_elab[scan_index].track_mat_select[track_index]
+```
+
+e recupera l'indice materiale da:
+
+```st
+MSI_data[scan_index].indice_codice_mat[track_index]
+```
+
+Motivo:
+
+```text
+non duplicare nel robot la logica di selezione materiale gia' fatta da Sensore_NIR
+```
+
+Prima di leggere `MATERIALI_ATTIVI`, `CODICI_MATERIALI` e `MATERIALI_ATTIVI_BOX`, il builder controlla che `code_index` sia tra `0` e `100`.
+
+Nota:
+
+```text
+questa scelta allinea il robot al dato elaborato, ma non risolve ancora il problema pezzo su piu' scan
 ```
 
 ## Rischi ridotti nello scaffold

@@ -7,6 +7,7 @@ VAR
 	target_available : BOOL;
 	tracking_step : UDINT;
 END_VAR
+(* @END_DECLARATION := '0' *)
 
 ROBOT_TARGET_REQUEST := FALSE;
 target_available := FALSE;
