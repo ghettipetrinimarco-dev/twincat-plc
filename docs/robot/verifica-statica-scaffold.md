@@ -214,6 +214,20 @@ Motivo:
 evitare conversione `INT_TO_TIME` nella prima compilazione
 ```
 
+### Stringa comando
+
+`ROBOT_COMMAND_STRING` e `command_tail` usano:
+
+```st
+STRING(150)
+```
+
+Motivo:
+
+```text
+il progetto esistente usa gia' STRING(150) per path file
+```
+
 ### Copia target corrente
 
 `Robot_Queue` copia `ROBOT_CURRENT_TARGET` campo per campo.

@@ -56,7 +56,7 @@ Correggere eventuali errori su:
 
 - allineamento `ROBOT_NIR_LAST_INDEX` con `BUFFER_SIZE`
 - variabili `TIME` persistent
-- `STRING(255)`
+- `STRING(150)`
 - conversioni `REAL_TO_STRING`
 - limiti array
 - ordine import TYPE/GVL/PROGRAM

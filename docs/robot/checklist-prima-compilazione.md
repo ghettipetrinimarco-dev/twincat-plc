@@ -60,7 +60,7 @@ verificare solo compatibilita' tipi, funzioni e riferimenti globali
 | `Unknown identifier ROBOT_*` in `Gestione_Encoder` | GVL robot non importata | Importare `ROBOT_GLOBALS.EXP` prima di `GESTIONE_ENCODER.EXP` modificato |
 | Target NIR letti dall'indice sbagliato | `ROBOT_NIR_LAST_INDEX` non allineato a `BUFFER_SIZE` | Impostare `ROBOT_NIR_LAST_INDEX` uguale a `BUFFER_SIZE` |
 | Errore su `ROBOT_SIM_PICK_TIME : TIME := T#500MS` | Default `TIME` non accettato in GVL | Usare literal `T#500MS` direttamente nel `TON` |
-| Errore su `STRING(255)` | Dimensione stringa non accettata | Ridurre a `STRING(150)` o usare lunghezza default |
+| Errore su `STRING(150)` | Dimensione stringa non accettata | Usare lunghezza default oppure spezzare comando in campi separati |
 | Errore su `REAL_TO_STRING` | Funzione conversione non disponibile | Usare conversione/libreria gia' disponibile nel progetto |
 | Errore su `ROBOT_TARGETS[slot_index]` | Indice o limite array non accettato | Verificare `slot_index : INT` e limiti `[0..49]` |
 | Errore su `ROBOT_CURRENT_TARGET.BoxIndex` dentro `X_BOX[...]` | Indice array non accettato | Usare variabile intermedia `command_box_index`, gia' presente |

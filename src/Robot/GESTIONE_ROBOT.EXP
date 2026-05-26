@@ -6,7 +6,7 @@ VAR
 	pick_timer : TON;
 	timer_active : BOOL;
 	command_box_index : INT;
-	command_tail : STRING(255);
+	command_tail : STRING(150);
 END_VAR
 
 ROBOT_SIM_PICK_DONE := FALSE;
