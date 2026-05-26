@@ -71,9 +71,9 @@ Il robot reale potrebbe pero' volere una logica diversa:
 
 Questa decisione dipende dal robot e dal suo controller.
 
-## Parametri ancora da aggiungere
+## Parametri aggiunti nello scaffold
 
-Servono almeno:
+Lo scaffold espone:
 
 ```text
 ROBOT_WAIT_PICK_MS
@@ -82,6 +82,8 @@ ROBOT_COMMAND_STRING
 ROBOT_COMMAND_READY
 ROBOT_COMMAND_SENT
 ```
+
+`Gestione_Robot` aggiorna `ROBOT_COMMAND_STRING` quando riceve `ROBOT_TARGET_REQUEST`.
 
 Da valutare dopo compilazione TwinCAT:
 
@@ -102,13 +104,13 @@ Generare solo target, coda e simulazione.
 
 ### Fase 2
 
-Aggiungere una stringa comando osservabile in watch:
+Osservare la stringa comando in watch:
 
 ```text
 ROBOT_COMMAND_STRING
 ```
 
-La stringa deve aggiornarsi quando `Robot_Queue` mette un target in `ROBOT_CURRENT_TARGET`.
+La stringa si aggiorna quando `Robot_Queue` mette un target in `ROBOT_CURRENT_TARGET` e `Gestione_Robot` accetta la richiesta.
 
 ### Fase 3
 

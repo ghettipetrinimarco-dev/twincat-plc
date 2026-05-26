@@ -96,6 +96,26 @@ Gestione_Encoder gira a 0.100 ms, Robot_Queue e' prevista nella task a 10 ms.
 Con un solo valore istantaneo si rischia di perdere impulsi tra due cicli della queue.
 ```
 
+### Comando robot osservabile
+
+`Gestione_Robot` genera `ROBOT_COMMAND_STRING` quando accetta un `ROBOT_TARGET_REQUEST`.
+
+Formato:
+
+```text
+@id,x_pick,y_pick,z_pick,angle,wait_pick,x_drop,y_drop,z_drop,wait_drop,#
+```
+
+Il comando usa:
+
+- `ROBOT_CURRENT_TARGET` per coordinate di presa
+- `X_BOX/Y_BOX/Z_BOX` per coordinate deposito
+- `ROBOT_WAIT_PICK_MS` e `ROBOT_WAIT_DROP_MS` per le attese
+
+`ROBOT_COMMAND_SENT` e' un impulso di un ciclo.
+
+`ROBOT_COMMAND_READY` segnala che la stringa del ciclo corrente e' valida.
+
 ## Correzioni fatte dopo verifica
 
 ### Array con limiti letterali

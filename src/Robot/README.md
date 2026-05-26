@@ -8,6 +8,7 @@ Scopo:
 - costruire target da scan NIR
 - creare target manuali di test con `Robot_TestInput`
 - tracciare target con encoder
+- generare `ROBOT_COMMAND_STRING` in formato storico `@...#`
 - simulare un robot ready/busy/picked
 
 Non e' ancora integrata in `TASK_CONFIGURATION.EXP` e non va caricata in produzione senza import/compile in TwinCAT.

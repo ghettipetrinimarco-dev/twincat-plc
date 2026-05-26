@@ -5,9 +5,12 @@ PROGRAM Gestione_Robot
 VAR
 	pick_timer : TON;
 	timer_active : BOOL;
+	command_box_index : INT;
+	command_tail : STRING(255);
 END_VAR
 
 ROBOT_SIM_PICK_DONE := FALSE;
+ROBOT_COMMAND_SENT := FALSE;
 
 ROBOT_STATE_GLOBAL.Enabled := ROBOT_ENABLED;
 ROBOT_STATE_GLOBAL.Simulation := ROBOT_SIMULATION;
@@ -19,6 +22,8 @@ IF NOT ROBOT_ENABLED THEN
 	ROBOT_STATE_GLOBAL.Ack := FALSE;
 	ROBOT_STATE_GLOBAL.PickDone := FALSE;
 	ROBOT_STATE_GLOBAL.PickFailed := FALSE;
+	ROBOT_COMMAND_STRING := '';
+	ROBOT_COMMAND_READY := FALSE;
 	timer_active := FALSE;
 ELSE
 	IF ROBOT_SIMULATION THEN
@@ -33,9 +38,29 @@ ELSE
 			ROBOT_STATE_GLOBAL.PickDone := FALSE;
 			ROBOT_STATE_GLOBAL.PickFailed := FALSE;
 			ROBOT_STATE_GLOBAL.CurrentTargetId := ROBOT_CURRENT_TARGET.Id;
+			IF ROBOT_CURRENT_TARGET.BoxIndex >= 0 AND ROBOT_CURRENT_TARGET.BoxIndex <= ROBOT_MAX_BOXES THEN
+				command_box_index := ROBOT_CURRENT_TARGET.BoxIndex;
+			ELSE
+				command_box_index := 0;
+			END_IF
+			ROBOT_COMMAND_STRING := CONCAT('@', UDINT_TO_STRING(ROBOT_CURRENT_TARGET.Id));
+			command_tail := CONCAT(',', REAL_TO_STRING(ROBOT_CURRENT_TARGET.PickX));
+			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(ROBOT_CURRENT_TARGET.PickY)));
+			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(ROBOT_CURRENT_TARGET.PickZ)));
+			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(ROBOT_CURRENT_TARGET.PickAngle)));
+			command_tail := CONCAT(command_tail, CONCAT(',', INT_TO_STRING(ROBOT_WAIT_PICK_MS)));
+			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(X_BOX[command_box_index])));
+			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(Y_BOX[command_box_index])));
+			command_tail := CONCAT(command_tail, CONCAT(',', REAL_TO_STRING(Z_BOX[command_box_index])));
+			command_tail := CONCAT(command_tail, CONCAT(',', INT_TO_STRING(ROBOT_WAIT_DROP_MS)));
+			command_tail := CONCAT(command_tail, ',#');
+			ROBOT_COMMAND_STRING := CONCAT(ROBOT_COMMAND_STRING, command_tail);
+			ROBOT_COMMAND_READY := TRUE;
+			ROBOT_COMMAND_SENT := TRUE;
 			timer_active := TRUE;
 		ELSE
 			ROBOT_STATE_GLOBAL.Ack := FALSE;
+			ROBOT_COMMAND_READY := FALSE;
 		END_IF
 
 		pick_timer(IN := timer_active, PT := INT_TO_TIME(ROBOT_SIM_PICK_TIME_MS), Q => , ET => );
@@ -50,6 +75,7 @@ ELSE
 		(* In Fase 2 qui verra' implementato il protocollo robot reale. *)
 		ROBOT_STATE_GLOBAL.Ready := FALSE;
 		ROBOT_STATE_GLOBAL.Busy := FALSE;
+		ROBOT_COMMAND_READY := FALSE;
 	END_IF
 END_IF
 END_PROGRAM
