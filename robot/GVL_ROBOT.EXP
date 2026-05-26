@@ -80,4 +80,12 @@ VAR_GLOBAL
     UiTag_robot         : INT  := 0;    (* contatore pick progressivo *)
     ROBOT_CONNESSO      : BOOL := FALSE; (* TRUE = socket TCP attiva *)
 
+    (* ============================================================
+       STATISTICHE ROBOT — calcolate da Processing_Robot
+       ============================================================ *)
+    PICK_AL_MINUTO      : INT  := 0;    (* pick confermati nell'ultimo minuto *)
+    EFFICIENZA_PICK     : REAL := 0.0;  (* % oggetti rilevati che vengono pickati *)
+    CODA_UTILIZZO       : REAL := 0.0;  (* % slot OBJ_queue occupati *)
+    ROBOT_CODA_PIENA    : BOOL := FALSE; (* TRUE = coda pick saturata, oggetti persi *)
+
 END_VAR

@@ -177,6 +177,10 @@ FOR t := 0 TO 5 DO
                 IF next_head <> obj_tail THEN
                     OBJ_queue[obj_head] := new_obj;
                     obj_head := next_head;
+                    ROBOT_CODA_PIENA := FALSE;
+                ELSE
+                    (* Coda piena — oggetto scartato, segnala allarme *)
+                    ROBOT_CODA_PIENA := TRUE;
                 END_IF
 
                 (* disattiva tracker *)

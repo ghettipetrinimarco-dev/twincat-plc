@@ -1,6 +1,6 @@
 # CONTEXT.md — Fonte di Verità del Progetto
 
-> Aggiornato: 2026-05-26 (sessione 4 — progetto robot analizzato, codice segmentazione scritto)
+> Aggiornato: 2026-05-26 (sessione 5 — progetto robot completato: ACK TCP, statistiche, protezione coda, task config)
 > Leggere sempre prima di toccare qualsiasi file.
 
 ---
@@ -278,12 +278,18 @@ Esempio: @42,58.5,1834.6,200.0,0.0,0.5,320.0,340.0,50.0,0.3,#
 |---|---|
 | `OBJ_PICK.EXP` | ✅ completo |
 | `BLOB_TRACKER.EXP` | ✅ completo |
-| `FB_SEGMENTAZIONE.EXP` | ✅ completo |
-| `GVL_ROBOT.EXP` | ✅ completo (valori placeholder) |
-| `gestionerobot.txt` | ✅ riscritto v2.0 — TCP diretto robot, no PickMaster |
-| `sensoreNIR.txt` | ⚠️ da modificare — vedi INTEGRAZIONE_SENSORE_NIR.md |
-| `INTEGRAZIONE_SENSORE_NIR.md` | ✅ guida passo-passo modifiche |
-| `ANALISI.md` | ✅ analisi completa bug progetto precedente |
+| `FB_SEGMENTAZIONE.EXP` | ✅ completo — include protezione ROBOT_CODA_PIENA |
+| `GVL_ROBOT.EXP` | ✅ completo — incluse statistiche PICK_AL_MINUTO, EFFICIENZA_PICK, CODA_UTILIZZO, ROBOT_CODA_PIENA |
+| `GVL_COMPLETO_ROBOT.EXP` | ✅ GVL unificato robot (sostituisce Global_Variables della selezionatrice) |
+| `gestionerobot.txt` | ✅ v2.1 — TCP diretto robot, no PickMaster, stato ATTESA_ACK con FB_SocketReceive |
+| `gestioneencoder_robot.txt` | ✅ Encoder semplificato (no EV), copia ENCODER_COUNTER ogni ciclo |
+| `processing_robot.txt` | ✅ Statistics PICK_AL_MINUTO, EFFICIENZA_PICK, CODA_UTILIZZO, allarme coda piena |
+| `sensoreNIR.txt` | ⚠️ Modificato — chiama FB_Segmentazione al posto del vecchio concat per tracce |
+| `RAPID_ROBOT.prg` | ✅ v2.1 — server TCP ABB RAPID, parsa stringa pick, ciclo pick+deposito, invia ACK "OK,tag,#" |
+| `TEST_PLAN.md` | ✅ Piano test 5 fasi (dal fisico all'integrazione) |
+| `TASK_CONFIG.md` | ✅ Configurazione 3 task TwinCAT 2, mapping I/O, ordine import POUs |
+| `INTEGRAZIONE_SENSORE_NIR.md` | ✅ Guida passo-passo modifiche sensoreNIR |
+| `ANALISI.md` | ✅ Analisi completa bug progetto precedente |
 
 ### Decisioni robot
 
@@ -292,6 +298,8 @@ Esempio: @42,58.5,1834.6,200.0,0.0,0.5,320.0,340.0,50.0,0.3,#
 | 2026-05-26 | Rimosso PickMaster — TCP diretto al robot | Nessun PC PickMaster confermato sul prototipo |
 | 2026-05-26 | Segmentazione per gap encoder, non per scan count | Robusta al wrap del ring buffer (BUFFER_SIZE=150) |
 | 2026-05-26 | MAX_BLOBS=6, MAX_OBJ_QUEUE=16 | Sufficienti per nastro recycling tipico |
+| 2026-05-26 | ACK TCP robot→PLC non bloccante (timeout 3s) | Produzione non bloccata se robot lento; n_ack_timeout conta i miss |
+| 2026-05-26 | ROBOT_CODA_PIENA in FB_Segmentazione (set) e Processing_Robot (reset) | Allarme coda saturata visibile sull'HMI, non perde oggetti in modo silenzioso |
 
 ### Variabili robot da configurare (placeholder in GVL_ROBOT.EXP)
 
@@ -307,13 +315,16 @@ Esempio: @42,58.5,1834.6,200.0,0.0,0.5,320.0,340.0,50.0,0.3,#
 
 ### TODO robot
 
-- [ ] Accedere al controller robot fisico: leggere IP, porta, programma RAPID presente
+**Codice PLC pronto per il test — da fare fisicamente sul prototipo:**
+- [ ] Accedere al controller robot fisico: leggere IP, porta, confermare tipo ABB
 - [ ] Caricare sul robot il programma RAPID listener TCP (`robot/RAPID_ROBOT.prg`)
-- [ ] Modificare `sensoreNIR.txt` secondo `INTEGRAZIONE_SENSORE_NIR.md`
-- [ ] Misurare `DISTANZA_ROBOT_MM` e `ALTEZZA` sul prototipo
-- [ ] Calcolare `SCAN_DISTANCE` (velocità nastro ÷ linee NIR/s)
+- [ ] Configurare: `IP_ROBOT`, `PORT_ROBOT` in `GVL_ROBOT.EXP`
+- [ ] Misurare `DISTANZA_ROBOT_MM` (NIR → punto di presa) e `ALTEZZA` (Z presa)
+- [ ] Calcolare `SCAN_DISTANCE` (vel nastro mm/s ÷ linee NIR/s)
+- [ ] Calibrare `TEMPO_CICLO_ROBOT` (misurare pick-to-pick reale con nastro fermo)
 - [ ] Configurare `X_BOX[]`, `Y_BOX[]`, `Z_BOX[]` per le posizioni di deposito
-- [ ] Test end-to-end: NIR → PLC → robot
+- [ ] Calibrare tool `tool_pinza` e workobject `wobj_nastro` in RobotStudio
+- [ ] Eseguire test in sequenza secondo `TEST_PLAN.md`
 
 ---
 
@@ -325,3 +336,4 @@ Esempio: @42,58.5,1834.6,200.0,0.0,0.5,320.0,340.0,50.0,0.3,#
 | 2026-05-05 | Seconda sessione: acquisizione codice sorgente completo (4 POU + GVL), analisi architettura |
 | 2026-05-05 | Terza sessione: acquisizione TWINCAT_CONFIGURATION.EXP e TASK_CONFIGURATION.EXP, risoluzione DISTANZA (impulsi encoder, 524,8mm fisici) |
 | 2026-05-26 | Quarta sessione: analisi progetto robot (branch session/2026-05-16), identificati bug (sovrascrittura tracce, no segmentazione), rimosso PickMaster, scritti FB_Segmentazione + OBJ_PICK + BLOB_TRACKER + GVL_ROBOT + Gestione_Robot v2.0 |
+| 2026-05-26 | Quinta sessione: completamento progetto robot — ACK TCP (stato 4 ATTESA_ACK), statistiche GVL (PICK_AL_MINUTO/EFFICIENZA/CODA_UTILIZZO/ROBOT_CODA_PIENA), processing_robot.txt, RAPID v2.1 con ACK, TASK_CONFIG.md, GVL_COMPLETO_ROBOT.EXP aggiornato |

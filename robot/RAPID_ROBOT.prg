@@ -3,7 +3,7 @@
 %%%
 
 !==============================================================================
-! RAPID_ROBOT.prg — ABB Robot pick listener per progetto NIR
+! RAPID_ROBOT.prg — ABB Robot pick listener per progetto NIR  v2.1
 ! ==============================================================================
 ! Carica questo modulo sul controller ABB (IRC5 / OmniCore) via RobotStudio
 ! o USB. Assegna il task T_ROB1 e avvia in modalità automatica.
@@ -13,6 +13,8 @@
 !   Riceve stringhe di pick dal PLC TwinCAT nel formato:
 !       @UiTag,X_mm,Y_mm,Z_mm,Rotazione,AttesaPresa,X_box,Y_box,Z_box,AttesaDeposito,#
 !   Esegue il movimento di pick e deposito per ogni stringa ricevuta.
+!   Invia ACK al PLC dopo ogni pick completato:
+!       OK,UiTag,#
 !
 ! IMPORTANTE — Valori da adattare al prototipo fisico:
 !   - PORT_LISTEN: porta TCP (deve corrispondere a PORT_ROBOT nel PLC)
@@ -269,6 +271,17 @@ PROC EseguiPick()
 
     n_pick_eseguiti := n_pick_eseguiti + 1;
     TPWrite "Pick #" + NumToStr(tag, 0) + " eseguito. Totale: " + NumToStr(n_pick_eseguiti, 0);
+
+    ! ---- Invia ACK al PLC ----
+    ! Il PLC (stato ATTESA_ACK) aspetta "OK,UiTag,#" per confermare il pick.
+    ! Il timeout PLC è 3s — se il ciclo robot è più lungo, il PLC lo ignora
+    ! e conteggia come ack_timeout (produzione non bloccata).
+    SocketSend client_socket \Str:="OK," + NumToStr(tag, 0) + ",#";
+
+    ERROR
+        ! Errore invio ACK — non critico, il PLC ha il proprio timeout
+        TPWrite "Errore ACK: " + NumToStr(ERRNO, 0);
+        TRYNEXT;
 ENDPROC
 
 !------------------------------------------------------------------------------

@@ -126,6 +126,12 @@ VAR_GLOBAL
     ABIL_ROBOT          : BOOL := FALSE;
     UiTag_robot         : INT  := 0;
 
+    (* --- Robot: statistiche real-time --- *)
+    PICK_AL_MINUTO      : INT  := 0;    (* pick confermati/minuto *)
+    EFFICIENZA_PICK     : REAL := 0.0;  (* % oggetti pickati / rilevati *)
+    CODA_UTILIZZO       : REAL := 0.0;  (* % slot OBJ_queue occupati *)
+    ROBOT_CODA_PIENA    : BOOL := FALSE; (* TRUE = coda saturata, oggetti scartati *)
+
 END_VAR
 
 (* ============================================================
