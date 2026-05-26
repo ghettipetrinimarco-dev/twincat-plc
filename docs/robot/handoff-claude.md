@@ -96,6 +96,7 @@ Leggere in questo ordine:
 4. `docs/robot/fase-1-specifica-implementazione.md`
 5. `docs/robot/scaffold-st-note-integrazione.md`
 6. `docs/robot/verifica-statica-scaffold.md`
+7. `docs/robot/comando-robot-da-target.md`
 
 Per dati mancanti:
 

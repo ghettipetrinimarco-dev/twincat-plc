@@ -24,7 +24,8 @@ Per lavorare sul codice:
 1. `verifica-statica-scaffold.md`
 2. `scaffold-st-note-integrazione.md`
 3. `piano-test-twincat-fase-1.md`
-4. `src/Robot/README.md`
+4. `comando-robot-da-target.md`
+5. `src/Robot/README.md`
 
 Per confrontarsi con Claude o riprendere il lavoro:
 
@@ -42,6 +43,7 @@ Per confrontarsi con Claude o riprendere il lavoro:
 | `mvp-tecnico.md` | Prima di scrivere codice | Requisiti del primo MVP |
 | `fase-1-specifica-implementazione.md` | Durante implementazione | POU, dati, algoritmi e test Fase 1 |
 | `protocollo-robot-provvisorio.md` | Quando si parla col robot | Formato `@...#` dedotto e protocollo consigliato |
+| `comando-robot-da-target.md` | Prima di implementare invio robot | Mappa campo-per-campo da target PLC a comando robot |
 | `scaffold-st-note-integrazione.md` | Prima dell'import TwinCAT | Come importare/testare lo scaffold senza rompere l'esistente |
 | `verifica-statica-scaffold.md` | Prima della compilazione | Controlli fatti e rischi residui TwinCAT |
 | `piano-test-twincat-fase-1.md` | Durante test TwinCAT | Watch list, passi e risultati attesi |
