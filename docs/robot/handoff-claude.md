@@ -98,6 +98,7 @@ Leggere in questo ordine:
 6. `docs/robot/verifica-statica-scaffold.md`
 7. `docs/robot/comando-robot-da-target.md`
 8. `docs/robot/checklist-prima-compilazione.md`
+9. `docs/robot/pacchetto-import-twincat.md`
 
 Per dati mancanti:
 
