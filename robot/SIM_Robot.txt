@@ -121,9 +121,14 @@ IF NOT in_timer_inj THEN
         mat_corrente := mat_corrente + 1;
         IF mat_corrente > 3 THEN mat_corrente := 0; END_IF
     ELSE
-        (* Materiale fisso *)
-        obj_sim.materiale  := SIM_MAT_FISSO;
-        obj_sim.indice_box := MATERIALI_ATTIVI_BOX[SIM_MAT_FISSO];
+        (* Materiale fisso — bounds check su SIM_MAT_FISSO prima di accedere all'array *)
+        IF SIM_MAT_FISSO >= 0 AND SIM_MAT_FISSO <= 15 THEN
+            obj_sim.materiale  := SIM_MAT_FISSO;
+            obj_sim.indice_box := MATERIALI_ATTIVI_BOX[SIM_MAT_FISSO];
+        ELSE
+            obj_sim.materiale  := 0;
+            obj_sim.indice_box := 0;
+        END_IF
         IF obj_sim.indice_box < 0 OR obj_sim.indice_box >= N_BOX THEN
             obj_sim.indice_box := 0;
         END_IF
