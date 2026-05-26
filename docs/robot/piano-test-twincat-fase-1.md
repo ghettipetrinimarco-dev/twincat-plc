@@ -52,6 +52,7 @@ ROBOT_ENABLED
 ROBOT_SIMULATION
 ROBOT_TEST_INPUT_ENABLED
 ROBOT_TEST_CREATE_TARGET
+ROBOT_RESET_REQUEST
 ROBOT_TEST_FIRST_TRACK
 ROBOT_TEST_LAST_TRACK
 ROBOT_TEST_BOX_INDEX
@@ -140,6 +141,33 @@ Se fallisce:
 - verificare che `Robot_TestInput()` sia nella task
 - verificare `ROBOT_TEST_INPUT_ENABLED`
 - verificare che la coda non sia piena
+
+## Test 1B - Reset layer robot
+
+Parametri:
+
+```text
+ROBOT_RESET_REQUEST := TRUE
+```
+
+Atteso entro pochi cicli:
+
+```text
+ROBOT_RESET_REQUEST torna FALSE
+ROBOT_TARGETS[0].Valid = FALSE
+ROBOT_CURRENT_TARGET.Id = 0
+ROBOT_NEXT_ID = 1
+ROBOT_TARGETS_DETECTED = 0
+ROBOT_TARGETS_SENT = 0
+ROBOT_TARGETS_PICKED = 0
+ROBOT_TARGETS_MISSED = 0
+ROBOT_COMMAND_STRING vuota
+```
+
+Se fallisce:
+
+- verificare che `Robot_Queue()` sia nella task
+- verificare che non venga creato subito un nuovo target manuale
 
 ## Test 2 - Avanzamento target
 

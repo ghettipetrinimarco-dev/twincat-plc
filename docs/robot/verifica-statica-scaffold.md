@@ -116,6 +116,22 @@ Il comando usa:
 
 `ROBOT_COMMAND_READY` segnala che la stringa del ciclo corrente e' valida.
 
+### Reset operativo
+
+`Robot_Queue` gestisce `ROBOT_RESET_REQUEST`.
+
+Quando il bit e' TRUE:
+
+- svuota `ROBOT_TARGETS`
+- azzera `ROBOT_CURRENT_TARGET.Id`
+- riporta `ROBOT_NEXT_ID` a `1`
+- azzera contatori target e contatori queue
+- azzera accumulo encoder robot
+- svuota `ROBOT_COMMAND_STRING`
+- riporta `ROBOT_RESET_REQUEST` a FALSE
+
+Serve per ripetere i test TwinCAT senza riavviare il progetto.
+
 ## Correzioni fatte dopo verifica
 
 ### Array con limiti letterali
