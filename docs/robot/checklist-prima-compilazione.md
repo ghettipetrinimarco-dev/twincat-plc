@@ -59,7 +59,7 @@ verificare solo compatibilita' tipi, funzioni e riferimenti globali
 | `Unknown type ROBOT_STATE` | Import ordine sbagliato | Importare `ROBOT_STATE.EXP` prima della GVL |
 | `Unknown identifier ROBOT_*` in `Gestione_Encoder` | GVL robot non importata | Importare `ROBOT_GLOBALS.EXP` prima di `GESTIONE_ENCODER.EXP` modificato |
 | Target NIR letti dall'indice sbagliato | `ROBOT_NIR_LAST_INDEX` non allineato a `BUFFER_SIZE` | Impostare `ROBOT_NIR_LAST_INDEX` uguale a `BUFFER_SIZE` |
-| Errore su `ROBOT_SIM_PICK_TIME : TIME := T#500MS` | Persistente `TIME` non accettata | Spostare il valore in `VAR_GLOBAL` non persistent o usare literal nel `TON` |
+| Errore su `ROBOT_SIM_PICK_TIME : TIME := T#500MS` | Default `TIME` non accettato in GVL | Usare literal `T#500MS` direttamente nel `TON` |
 | Errore su `STRING(255)` | Dimensione stringa non accettata | Ridurre a `STRING(150)` o usare lunghezza default |
 | Errore su `REAL_TO_STRING` | Funzione conversione non disponibile | Usare conversione/libreria gia' disponibile nel progetto |
 | Errore su `ROBOT_TARGETS[slot_index]` | Indice o limite array non accettato | Verificare `slot_index : INT` e limiti `[0..49]` |

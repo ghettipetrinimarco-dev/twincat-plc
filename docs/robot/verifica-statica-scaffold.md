@@ -206,6 +206,8 @@ ROBOT_SIM_PICK_TIME : TIME := T#500MS
 
 e passa direttamente questo valore al `TON`.
 
+`ROBOT_SIM_PICK_TIME` e' in `VAR_GLOBAL`, non in `VAR_GLOBAL PERSISTENT`.
+
 Motivo:
 
 ```text
