@@ -1,0 +1,18 @@
+(* Generated automatically by TwinCAT - (read only) *)
+(*
+   Mapping I/O per progetto Robot — versione ridotta.
+   Rispetto alla selezionatrice originale, mantiene SOLO l'encoder
+   (necessario per FB_Segmentazione e calcolo SPEED).
+   RIMOSSE: tutte le EV Out_1..Out_117, ANALOG_IN, EK1100/EL2004/EL2809,
+            pressione/flussostato (non usati dal robot picker).
+   I valori AT %IB sono PLACEHOLDER — il System Manager scrive questo file
+   automaticamente quando associ le variabili ai moduli EtherCAT reali.
+*)
+VAR_CONFIG
+	Gestione_Encoder_Robot.Counter        AT %IB0  : UDINT;
+	Gestione_Encoder_Robot.Encoder_STATE  AT %IB4  : UINT;
+	Gestione_Encoder_Robot.Period         AT %IB6  : UDINT;
+	(* Output diagnostica HMI *)
+	.Errore_connessione_sensore           AT %QX0.0 : BOOL;
+	.Macchina_pronta                      AT %QX0.1 : BOOL;
+END_VAR

@@ -18,11 +18,8 @@ VAR
 	(* Segmentazione oggetti NIR → pick robot *)
 	segmentazione: FB_Segmentazione;
 
-	(*Ingressi----------------------*)
-	EK1100_STATE AT %I*:UINT;
-	OUT_1_STATE AT %I*:UINT;
-	(*Uscite------------------------*)
-	Out_1 AT %Q*:BOOL;
+	(* I/O HW della selezionatrice rimossi: il robot non ha EK1100/EL2004 (EV).
+	   Diagnostica EtherCAT semplificata: solo ENCODER_OK (vedi riga ~708). *)
 	Ritardo_Trig:TON;
 	LOAD_ID_TMP:ARRAY[0..2] OF BYTE;
 	Connessione_UDP: FB_SocketUdpCreate;
@@ -705,7 +702,9 @@ END_IF
 
 
 (*Diagnostica I/O*)
-IF EK1100_STATE<>8 OR OUT_1_STATE<>8 THEN DIAGNOSTICA_OK:=FALSE; ELSE DIAGNOSTICA_OK:=TRUE; END_IF
+(* Diagnostica robot: solo l'encoder è hardware critico (no EV).
+   Estendibile aggiungendo controllo modulo EtherCAT encoder se serve. *)
+IF ENCODER_OK THEN DIAGNOSTICA_OK:=TRUE; ELSE DIAGNOSTICA_OK:=FALSE; END_IF
 (*Uscite*)
 (* Out_1 / Trig rimossi: la logica pick è ora gestita via OBJ_queue da Gestione_Robot *)
 (* Out_1:=Trig; — rimosso v2.0 *)

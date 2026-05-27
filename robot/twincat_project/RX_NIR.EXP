@@ -1,0 +1,19 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+TYPE RX_NIR :
+STRUCT
+	Status_byte:BYTE;
+	Scan_counter_high:BYTE;
+	Scan_counter_middle:BYTE;
+	Scan_counter_low:BYTE;
+	track:ARRAY[1..NUM_TRACKS_NIR] OF BYTE;
+	track_mat_select:ARRAY[1..NUM_TRACKS_NIR] OF BOOL; (*Se TRUE ho un materiale selezionato in tale traccia x*)
+	track_mat_inq:ARRAY[1..NUM_TRACKS_NIR] OF BOOL; (*Se TRUE ho un materiale inquinante in tale traccia x*)
+	indice_codice_mat:ARRAY[1..NUM_TRACKS_NIR] OF INT; (*Indice del Codice materiale - utilizzato per sapere quale codice è stato campionato/selezionato*)
+	End_of_file :BYTE;
+	Position:UDINT;
+	esplus_effettuata:BOOL;
+END_STRUCT
+END_TYPE
+(* @END_DECLARATION := '0' *)

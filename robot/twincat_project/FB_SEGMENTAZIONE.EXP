@@ -1,0 +1,225 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* @SYMFILEFLAGS := '2048' *)
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* @SYMFILEFLAGS := '2048' *)
+(*
+    FB_SEGMENTAZIONE
+    ================
+    Converte lo stream NIR (per-traccia, per-scan) in oggetti discreti.
+
+    Chiamare UNA VOLTA per scan, dentro Sensore_NIR, subito dopo aver
+    popolato MSI_data[index_nir].track_mat_select[] e .indice_codice_mat[].
+
+    Output: scrive OBJ_PICK completati in OBJ_queue[] (GVL),
+            avanza obj_head circolarmente.
+
+    Parametri da configurare in GVL_ROBOT:
+        OBJ_TRACK_TOLERANCE : INT   — margine laterale per linkare blob (default 3 tracce)
+        OBJ_GAP_ENCODER     : UDINT — impulsi encoder senza attività = fine oggetto (default 50)
+        MAX_BLOBS           : INT   — tracker simultanei (default 6)
+        MAX_OBJ_QUEUE       : INT   — slot coda pick (default 16)
+*)
+FUNCTION_BLOCK FB_Segmentazione
+VAR_INPUT
+    track_mat_select    : ARRAY[1..NUM_TRACKS_NIR] OF BOOL;  (* tracce con materiale selezionato *)
+    indice_codice_mat   : ARRAY[1..NUM_TRACKS_NIR] OF INT;   (* indice materiale per ogni traccia *)
+    encoder_pos         : UDINT;                              (* posizione encoder corrente *)
+    enable              : BOOL;                               (* abilitazione elaborazione *)
+END_VAR
+VAR_OUTPUT
+    n_oggetti_in_coda   : INT;  (* oggetti validi non ancora inviati *)
+END_VAR
+VAR
+    (* --- loop indices --- *)
+    i           : INT;
+    b           : INT;
+    t           : INT;
+    m           : INT;
+
+    (* --- blob trovati in questa scan --- *)
+    blob_tmin   : ARRAY[0..5] OF INT;
+    blob_tmax   : ARRAY[0..5] OF INT;
+    blob_mat    : ARRAY[0..5] OF INT;   (* materiale più frequente nel blob *)
+    n_blobs     : INT;
+    in_blob     : BOOL;
+
+    (* --- matching --- *)
+    matched     : BOOL;
+    free_slot   : INT;
+    overlap     : BOOL;
+
+    (* --- chiusura tracker --- *)
+    max_count   : UDINT;
+    dom_mat     : INT;
+    new_obj     : OBJ_PICK;
+    next_head   : INT;
+    n_in_coda   : INT;
+END_VAR
+(* @END_DECLARATION := '0' *)
+(* @END_DECLARATION := '0' *)
+
+IF NOT enable THEN RETURN; END_IF
+
+(* ================================================================
+   STEP 1 — Trova blob nella scan corrente
+   Un blob = sequenza contigua di tracce con materiale selezionato.
+   ================================================================ *)
+n_blobs  := 0;
+in_blob  := FALSE;
+
+FOR i := 1 TO NUM_TRACKS_NIR DO
+    IF track_mat_select[i] THEN
+        IF NOT in_blob THEN
+            (* inizio nuovo blob *)
+            IF n_blobs < MAX_BLOBS THEN
+                blob_tmin[n_blobs] := i;
+                blob_tmax[n_blobs] := i;
+                blob_mat [n_blobs] := indice_codice_mat[i];
+                in_blob := TRUE;
+            END_IF
+        ELSE
+            blob_tmax[n_blobs] := i;
+        END_IF
+    ELSE
+        IF in_blob THEN
+            (* fine blob — passa al prossimo slot *)
+            n_blobs := n_blobs + 1;
+            in_blob := FALSE;
+        END_IF
+    END_IF
+END_FOR
+(* chiudi l'eventuale blob aperto a fine scan *)
+IF in_blob THEN n_blobs := n_blobs + 1; END_IF
+
+(* ================================================================
+   STEP 2 — Matcha blob → tracker (per overlap laterale)
+   Tolleranza: ±OBJ_TRACK_TOLERANCE tracce per collegare oggetti
+   con piccoli vuoti laterali tra scan consecutive.
+   ================================================================ *)
+FOR b := 0 TO n_blobs - 1 DO
+    matched    := FALSE;
+    free_slot  := -1;
+
+    FOR t := 0 TO MAX_BLOBS - 1 DO
+        IF blob_trackers[t].attivo THEN
+            overlap :=
+                (blob_tmin[b] <= blob_trackers[t].track_max + OBJ_TRACK_TOLERANCE) AND
+                (blob_tmax[b] >= blob_trackers[t].track_min - OBJ_TRACK_TOLERANCE);
+
+            IF overlap AND NOT matched THEN
+                (* aggiorna tracker esistente *)
+                IF blob_tmin[b] < blob_trackers[t].track_min THEN
+                    blob_trackers[t].track_min := blob_tmin[b];
+                END_IF
+                IF blob_tmax[b] > blob_trackers[t].track_max THEN
+                    blob_trackers[t].track_max := blob_tmax[b];
+                END_IF
+                blob_trackers[t].encoder_last_active := encoder_pos;
+                blob_trackers[t].n_pixel :=
+                    blob_trackers[t].n_pixel +
+                    INT_TO_UDINT(blob_tmax[b] - blob_tmin[b] + 1);
+                IF blob_mat[b] >= 0 AND blob_mat[b] <= 15 THEN
+                    blob_trackers[t].mat_count[blob_mat[b]] :=
+                        blob_trackers[t].mat_count[blob_mat[b]] + 1;
+                END_IF
+                matched := TRUE;
+            END_IF
+        ELSE
+            IF free_slot = -1 THEN free_slot := t; END_IF
+        END_IF
+    END_FOR
+
+    (* Nessun tracker compatibile → crea nuovo *)
+    IF NOT matched AND free_slot >= 0 THEN
+        MEMSET(ADR(blob_trackers[free_slot]), 0, SIZEOF(blob_trackers[free_slot]));
+        blob_trackers[free_slot].attivo              := TRUE;
+        blob_trackers[free_slot].track_min           := blob_tmin[b];
+        blob_trackers[free_slot].track_max           := blob_tmax[b];
+        blob_trackers[free_slot].encoder_start       := encoder_pos;
+        blob_trackers[free_slot].encoder_last_active := encoder_pos;
+        blob_trackers[free_slot].n_pixel             :=
+            INT_TO_UDINT(blob_tmax[b] - blob_tmin[b] + 1);
+        IF blob_mat[b] >= 0 AND blob_mat[b] <= 15 THEN
+            blob_trackers[free_slot].mat_count[blob_mat[b]] := 1;
+        END_IF
+    END_IF
+END_FOR
+
+(* ================================================================
+   STEP 3 — Chiudi tracker inattivi
+   Se l'encoder è avanzato di OBJ_GAP_ENCODER impulsi dall'ultima
+   scan attiva, l'oggetto è finito. Calcoliamo centroide e pusho
+   in OBJ_queue.
+   ================================================================ *)
+FOR t := 0 TO MAX_BLOBS - 1 DO
+    IF blob_trackers[t].attivo THEN
+
+        (* gestione wrap-around encoder (UDINT) *)
+        IF encoder_pos >= blob_trackers[t].encoder_last_active THEN
+            IF (encoder_pos - blob_trackers[t].encoder_last_active) >= OBJ_GAP_ENCODER THEN
+
+                (* --- Materiale dominante --- *)
+                max_count := 0;
+                dom_mat   := 0;
+                FOR m := 0 TO 15 DO
+                    IF blob_trackers[t].mat_count[m] > max_count THEN
+                        max_count := blob_trackers[t].mat_count[m];
+                        dom_mat   := m;
+                    END_IF
+                END_FOR
+
+                (* --- Costruisci OBJ_PICK --- *)
+                new_obj.X          := INT_TO_REAL(blob_trackers[t].track_min +
+                                                  blob_trackers[t].track_max) / 2.0;
+                new_obj.Y          := blob_trackers[t].encoder_start;
+                new_obj.materiale  := dom_mat;
+                (* Bounds check indice_box: MATERIALI_ATTIVI_BOX può essere 0..N_BOX-1 *)
+                IF MATERIALI_ATTIVI_BOX[dom_mat] >= 0 AND
+                   MATERIALI_ATTIVI_BOX[dom_mat] < N_BOX THEN
+                    new_obj.indice_box := MATERIALI_ATTIVI_BOX[dom_mat];
+                ELSE
+                    new_obj.indice_box := 0;  (* box 0 come fallback sicuro *)
+                END_IF
+                new_obj.valido     := TRUE;
+                new_obj.inviato    := FALSE;
+
+                (* --- Aggiorna contatore oggetti campionati --- *)
+                IF dom_mat >= 0 AND dom_mat <= 100 THEN
+                    NUM_CAMPIONATI[dom_mat] := NUM_CAMPIONATI[dom_mat] + 1;
+                END_IF
+
+                (* --- Inserisci in coda circolare se non piena --- *)
+                next_head := obj_head + 1;
+                IF next_head > MAX_OBJ_QUEUE THEN next_head := 0; END_IF
+                IF next_head <> obj_tail THEN
+                    OBJ_queue[obj_head] := new_obj;
+                    obj_head := next_head;
+                    ROBOT_CODA_PIENA := FALSE;
+                ELSE
+                    (* Coda piena — oggetto scartato, segnala allarme *)
+                    ROBOT_CODA_PIENA := TRUE;
+                END_IF
+
+                (* disattiva tracker *)
+                blob_trackers[t].attivo := FALSE;
+
+            END_IF
+        END_IF
+    END_IF
+END_FOR
+
+(* ================================================================
+   Output diagnostico: quanti oggetti validi in coda
+   ================================================================ *)
+n_in_coda := 0;
+FOR i := 0 TO MAX_OBJ_QUEUE DO
+    IF OBJ_queue[i].valido AND NOT OBJ_queue[i].inviato THEN
+        n_in_coda := n_in_coda + 1;
+    END_IF
+END_FOR
+n_oggetti_in_coda := n_in_coda;
+

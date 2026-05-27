@@ -1,0 +1,15 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* Oggetto rilevato dal NIR, pronto per essere pickato dal robot *)
+TYPE OBJ_PICK :
+STRUCT
+	X           : REAL;     (* centroide laterale — unità: numero traccia NIR *)
+	Y           : UDINT;    (* posizione encoder alla prima scan dell'oggetto *)
+	materiale   : INT;      (* indice in CODICI_MATERIALI *)
+	indice_box  : INT;      (* box di destinazione per questo materiale *)
+	valido      : BOOL;     (* TRUE = oggetto completo, pronto per invio *)
+	inviato     : BOOL;     (* TRUE = già inviato al robot *)
+END_STRUCT
+END_TYPE
+(* @END_DECLARATION := '0' *)
