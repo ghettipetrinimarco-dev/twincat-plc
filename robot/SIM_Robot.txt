@@ -80,6 +80,8 @@ IF SIM_MODO = 2 THEN
             IF next_head_sim <> obj_tail THEN
                 OBJ_queue[obj_head] := obj_sim;
                 obj_head := next_head_sim;
+                (* Aggiorna NUM_CAMPIONATI per coerenza stats — il SIM bypassa FB_Segmentazione *)
+                NUM_CAMPIONATI[0] := NUM_CAMPIONATI[0] + 1;
             END_IF
             burst_count := burst_count + 1;
         ELSE
@@ -148,6 +150,12 @@ IF NOT in_timer_inj THEN
     IF next_head_sim <> obj_tail THEN
         OBJ_queue[obj_head] := obj_sim;
         obj_head := next_head_sim;
+        (* Aggiorna NUM_CAMPIONATI per coerenza stats — il SIM bypassa FB_Segmentazione.
+           Senza questa riga obj_rilevati_parz resta 0 e EFFICIENZA_PICK resta 0
+           contraddicendo la documentazione del file. *)
+        IF obj_sim.materiale >= 0 AND obj_sim.materiale <= 100 THEN
+            NUM_CAMPIONATI[obj_sim.materiale] := NUM_CAMPIONATI[obj_sim.materiale] + 1;
+        END_IF
     ELSE
         (* Coda piena — il simulatore non può iniettare *)
         (* Questo è normale se ABIL_ROBOT=FALSE o robot non risponde *)

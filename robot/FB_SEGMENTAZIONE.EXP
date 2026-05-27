@@ -145,7 +145,7 @@ END_FOR
    scan attiva, l'oggetto è finito. Calcoliamo centroide e pusho
    in OBJ_queue.
    ================================================================ *)
-FOR t := 0 TO 5 DO
+FOR t := 0 TO MAX_BLOBS - 1 DO
     IF blob_trackers[t].attivo THEN
 
         (* gestione wrap-around encoder (UDINT) *)
