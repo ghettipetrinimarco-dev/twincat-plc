@@ -718,3 +718,4 @@ IF ENCODER_OK THEN DIAGNOSTICA_OK:=TRUE; ELSE DIAGNOSTICA_OK:=FALSE; END_IF
 IF SystemTaskInfoArr[2].lastExecTime>max_time_task THEN max_time_task:=SystemTaskInfoArr[2].lastExecTime; END_IF
 (*Calcolo counter exceed*)
 IF SystemTaskInfoArr[2].cycleTimeExceeded THEN count_exceed:=count_exceed+1;END_IF
+END_PROGRAM

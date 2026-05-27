@@ -2,10 +2,6 @@
 (* @PATH := '' *)
 (* @OBJECTFLAGS := '0, 8' *)
 (* @SYMFILEFLAGS := '2048' *)
-(* @NESTEDCOMMENTS := 'Yes' *)
-(* @PATH := '' *)
-(* @OBJECTFLAGS := '0, 8' *)
-(* @SYMFILEFLAGS := '2048' *)
 (*
     FB_SEGMENTAZIONE
     ================
@@ -59,7 +55,6 @@ VAR
     next_head   : INT;
     n_in_coda   : INT;
 END_VAR
-(* @END_DECLARATION := '0' *)
 (* @END_DECLARATION := '0' *)
 
 IF NOT enable THEN RETURN; END_IF
@@ -223,3 +218,4 @@ FOR i := 0 TO MAX_OBJ_QUEUE DO
 END_FOR
 n_oggetti_in_coda := n_in_coda;
 
+END_FUNCTION_BLOCK

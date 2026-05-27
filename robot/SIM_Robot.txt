@@ -162,3 +162,4 @@ IF NOT in_timer_inj THEN
         ROBOT_CODA_PIENA := TRUE;
     END_IF
 END_IF
+END_PROGRAM
