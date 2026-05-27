@@ -1,6 +1,6 @@
 # CONTEXT.md — Fonte di Verità del Progetto
 
-> Aggiornato: 2026-05-26 (sessione 5 — progetto robot completato: ACK TCP, statistiche, protezione coda, task config)
+> Aggiornato: 2026-05-27 (sessione 6 — tentativo import TwinCAT 2: diagnosticati e corretti 3 round di errori EXP)
 > Leggere sempre prima di toccare qualsiasi file.
 
 ---
@@ -313,6 +313,34 @@ Esempio: @42,58.5,1834.6,200.0,0.0,0.5,320.0,340.0,50.0,0.3,#
 | `X_BOX[]`, `Y_BOX[]`, `Z_BOX[]` | 0.0 | Misurare: coordinate box deposito |
 | `OBJ_GAP_ENCODER` | 50 | Calibrare: impulsi encoder tra oggetti diversi |
 
+### Stato import TwinCAT 2 (aggiornato 2026-05-27)
+
+| Step | Stato | Note |
+|---|---|---|
+| File .EXP generati (16 file v3) | ✅ Pronti | `robot/twincat_project_v3.zip` — senza library stubs |
+| Formato POU .EXP (headers + END_PROGRAM) | ✅ Verificato identico a src/ funzionante |
+| Formato TYPE .EXP (OBJ_PICK, BLOB_TRACKER) | ✅ Struttura corretta con @END_DECLARATION |
+| TASK_CONFIGURATION.EXP | ✅ Ha END_RESOURCE, 3 task corretti |
+| Import in progetto nuovo vuoto | ⚠️ **In corso** — utente deve usare File→New, NON aprire exper.pro |
+| Librerie (.LIB) da aggiungere a mano | ⚠️ Non importabili come .EXP — aggiungere via Library Manager |
+| Build F11 con errori | ❌ Non ancora raggiunto |
+
+**Errori visti finora e significato:**
+- `Error 3554 Task entry 'MAIN'` → task config importata in progetto ESISTENTE (exper.pro) che aveva già un MAIN. Soluzione: progetto nuovo.
+- `Error 3403 Could not import ''` (×5) → file STANDARD.LIB.EXP ecc. non importabili — normale. Rimossi dalla v3.
+- `Error 3403 Could not import 'Workspace'` → WORKSPACE.EXP non importabile — normale. Rimosso dalla v3.
+- `Error 3415 alarmconfiguration` → formato alarm config non compatibile — innocuo.
+
+**Procedura corretta (v3):**
+1. File → New → "PC or CX (x86)" → OK
+2. NON cancellare PLC_PRG subito
+3. Project → Import... → tutti e 16 i .EXP della v3
+4. Overwrite se chiesto
+5. Cancella PLC_PRG default dal tab POUs
+6. Library Manager → aggiungi 5 .LIB a mano
+7. File → Save as → NIR_Robot_v1.pro
+8. F11 → mandare log errori
+
 ### TODO robot
 
 **Codice PLC pronto per il test — da fare fisicamente sul prototipo:**
@@ -337,3 +365,4 @@ Esempio: @42,58.5,1834.6,200.0,0.0,0.5,320.0,340.0,50.0,0.3,#
 | 2026-05-05 | Terza sessione: acquisizione TWINCAT_CONFIGURATION.EXP e TASK_CONFIGURATION.EXP, risoluzione DISTANZA (impulsi encoder, 524,8mm fisici) |
 | 2026-05-26 | Quarta sessione: analisi progetto robot (branch session/2026-05-16), identificati bug (sovrascrittura tracce, no segmentazione), rimosso PickMaster, scritti FB_Segmentazione + OBJ_PICK + BLOB_TRACKER + GVL_ROBOT + Gestione_Robot v2.0 |
 | 2026-05-26 | Quinta sessione: completamento progetto robot — ACK TCP (stato 4 ATTESA_ACK), statistiche GVL (PICK_AL_MINUTO/EFFICIENZA/CODA_UTILIZZO/ROBOT_CODA_PIENA), processing_robot.txt, RAPID v2.1 con ACK, TASK_CONFIG.md, GVL_COMPLETO_ROBOT.EXP aggiornato |
+| 2026-05-27 | Sesta sessione: import TwinCAT 2 — diagnostica e fix iterativo errori .EXP. Vedi `notes/sessione6_import.md` per dettaglio |
