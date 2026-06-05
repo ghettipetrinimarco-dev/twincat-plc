@@ -1,0 +1,682 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* @SYMFILEFLAGS := '2048' *)
+PROGRAM Sensore_NIR
+VAR CONSTANT
+	ONLINE_MSI: ARRAY [0..1] OF BYTE:=16#34,16#F0;
+	GET_TYPE_MSI: ARRAY [0..2] OF BYTE:=16#32,16#01,16#F0;
+	OFFLINE_MSI:ARRAY[0..1] OF BYTE:=16#3F,16#F0;
+	WHITE_MSI: ARRAY [0..1] OF BYTE:=16#35,16#F0;
+	BLACK_MSI: ARRAY [0..1] OF BYTE:=16#3A,16#F0;
+	SHUT_DOWN_MSI: ARRAY [0..1] OF BYTE:=16#3B,16#F0;
+	AUTOSAVE_START:ARRAY[0..3] OF BYTE:=16#33,16#07,16#01,16#F0;
+	AUTOSAVE_STOP:ARRAY[0..3] OF BYTE:=16#33,16#07,16#00,16#F0;
+END_VAR
+VAR
+	LOAD_ID_TMP:ARRAY[0..2] OF BYTE;
+	Connessione_UDP: FB_SocketUdpCreate;
+	hSocket_UDP: T_HSOCKET;
+	Spedisci_UDP: FB_SocketUdpSendTo;
+	Ricevi_UDP: FB_SocketUdpReceiveFrom;
+	Chiudi_UDP: FB_SocketCloseAll;
+	adr_send:UDINT;
+	reboot:NT_Reboot;
+	shut_down:NT_Shutdown;
+	wr_data:WritePersistentData;
+	RX_get_type: ARRAY [0..1000] OF BYTE;
+	RX_Tmp_MSI: ARRAY [0..RX_NUM_NIR] OF BYTE;
+	size:UDINT;
+	Stato:INT:=99;
+	Aux_ricevi:BOOL:=0;
+	indice:INT;
+	MSI_ok: BOOL;
+	error_MSI:TON;
+	Linee_sec:INT;
+	R_Dati_error: R_TRIG;
+	Dati_error: BOOL;
+	Ritardo:TON;
+	Ritardo_off:TON;
+	calib_ok:BOOL;
+	trig_calib:R_TRIG;
+	spegni_nir: R_TRIG;
+	ok_spegni: BOOL:=FALSE;
+	ok_dati_salvati: BOOL:=FALSE;
+	fs_riavvio:R_TRIG;
+	indice_visu: UINT;
+	max_time_task:UDINT;
+	count_exceed: UDINT;
+	All_sens_scoll_1: BOOL;
+	All_sens_scoll_2: BOOL;
+	All_send: BOOL;
+	All_calibr_black: BOOL;
+	All_calibr_white: BOOL;
+	All_nir: BOOL;
+	All_link: BOOL;
+	All_dati: BOOL;
+	All_load:BOOL;
+	All_get_type: BOOL;
+	N_error_pack:UDINT;
+	impulso_start: BOOL;
+	trig_start:R_TRIG;
+	impulso_stop: BOOL;
+	trig_stop: R_TRIG;
+	Ritardo_conn_sensore:TON;
+	linee_nir_max: UDINT;
+	linee_nir_min: UDINT;
+	n_volte:UDINT;
+	Perc_carico_parz: UDINT;
+	Ritardo_conn_sensore_trig: R_TRIG;
+	fronte_ritardo_linee_ok: R_TRIG;
+	fronte_ritardo_linee: R_TRIG;
+	ritardo_linee: TON;
+	primo_avvio: BOOL:=TRUE;
+	t_ritardo:TIME;
+	f_abil_nir: F_TRIG;
+	salva_dati_auto:BOOL:=FALSE;
+	ritardo_error: TON;
+	rit_viu_eth:TON;
+	riga: INT;
+	full: BOOL;
+	start_edge: R_TRIG;
+	riga_storico: INT:=0;
+	reset_visu:R_TRIG;
+	ricevuto: BOOL;
+	index_type: INT;
+	i_nome: INT;
+	indice_codice: UINT;
+	indice_materiale: UINT;
+	indice_calc: UINT;
+	indice_calc_2: UINT;
+	indice_calc_3: UINT;
+	indice_calc_4: UINT;
+	i: INT;
+	elaborato: BOOL;
+	Pixel_inquinanti: UDINT;
+	Pixel_ok: UDINT;
+	col_process: INT;
+	riga_process: INT;
+	row_index: INT;
+	row_index_cal: INT;
+	totale: REAL;
+	percentuale: REAL;
+	pezzo_presente:BOOL;
+	indice_data:INT;
+	aux_pixel:INT;
+	indice_start:INT;
+	indice_stop:INT;
+	fornte_n_start:F_TRIG;
+	indice_stop_calc:INT;
+	i_elab: INT;
+	i_calc: INT;
+	pezzo_pres_elab: BOOL;
+	indice_colonna: INT;
+	num_cicli:INT;
+	High_prec:BYTE;
+	Low_prec:BYTE;
+	Scan_calc: BYTE;
+	Delay_auto_calib:TON;
+	calib_done_auto:BOOL;
+	Ton_err_con:TON;
+END_VAR
+(* @END_DECLARATION := '0' *)
+ricevuto:=FALSE;
+start_edge(CLK:=start_storico , Q=> );
+IF start_edge.Q THEN full:=FALSE; storico_full_1:=FALSE; storico_full_2:=FALSE; riga_storico:=0;END_IF
+IF NOT start_storico THEN storico_full_1:=FALSE; storico_full_2:=FALSE; riga_storico:=0; END_IF
+IF SPEED>0.5 AND NIR_ATTIVO AND DIAGNOSTICA_OK THEN Macchina_pronta:=TRUE; ELSE Macchina_pronta:=FALSE; END_IF;
+IF ((SPEED>0.5 AND ABIL_NIR AND NOT ETH_LINK_OK AND NOT primo_avvio) OR (Ritardo_conn_sensore_trig.Q AND NOT ETH_LINK_OK)) THEN impulso_start:=TRUE; ELSE impulso_start:=FALSE; END_IF
+trig_start(CLK:=impulso_start , Q=> );
+f_abil_nir(CLK:=ABIL_NIR , Q=> );
+IF f_abil_nir.Q THEN primo_avvio:=FALSE; END_IF
+Ritardo_conn_sensore_trig(CLK:=Ritardo_conn_sensore.Q , Q=> );
+IF primo_avvio THEN t_ritardo:=T#10S; ELSE t_ritardo:=T#500MS; END_IF
+Ritardo_conn_sensore(IN:=ABIL_NIR , PT:=t_ritardo , Q=> , ET=> );
+IF NOT ABIL_NIR AND Stato=2 THEN impulso_stop:=TRUE; ELSE impulso_stop:=FALSE; END_IF
+trig_stop(CLK:=impulso_stop , Q=> );
+IF trig_start.Q AND Stato=99 THEN
+	N_error_pack:=0;
+	Stato:=0;
+	All_dati:=FALSE;
+	All_sens_scoll_1:=FALSE;
+	All_sens_scoll_2:=FALSE;
+	All_link:=FALSE;
+	All_send:=FALSE;
+	All_nir:=FALSE;
+	All_calibr_black:=FALSE;
+	All_calibr_white:=FALSE;
+	All_load:=FALSE;
+	All_get_type:= FALSE;
+END_IF
+IF trig_stop.Q THEN
+	Stato:=1;
+END_IF
+
+CASE Stato OF
+0:
+	MSI_ok:=FALSE;
+	MEMSET(ADR(RX_Tmp_MSI),0, SIZEOF(RX_Tmp_MSI));
+	Connessione_UDP(
+			sSrvNetId:= '',
+			sLocalHost:=IP_LOCAL ,
+			nLocalPort:= IP_PORT_LOCAL,
+			bExecute:= TRUE,
+			tTimeout:=DEFAULT_ADS_TIMEOUT ,
+			bBusy=> ,
+			bError=> ,
+			nErrId=> ,
+			hSocket=>hSocket_UDP );
+	Connessione_UDP(bExecute:= FALSE,);
+	IF NOT Connessione_UDP.bBusy THEN
+		IF NOT Connessione_UDP.bError THEN
+			IF hSocket_UDP.handle <> 0 THEN
+				Stato:=1;
+			ELSE
+				All_sens_scoll_1:=TRUE;
+				Stato:=3;
+				ABIL_NIR:=FALSE;
+				IF BLACK_CALIB THEN BLACK_CALIB:=FALSE; calib_ok:=FALSE; END_IF
+				IF WHITE_CALIB THEN WHITE_CALIB:=FALSE; calib_ok:=FALSE; END_IF
+			END_IF
+		ELSE
+			All_sens_scoll_2:=TRUE;
+			Stato:=3;
+			ABIL_NIR:=FALSE;
+			IF BLACK_CALIB THEN BLACK_CALIB:=FALSE; calib_ok:=FALSE; END_IF
+			IF WHITE_CALIB THEN WHITE_CALIB:=FALSE; calib_ok:=FALSE; END_IF
+		END_IF
+	END_IF
+
+1:
+		IF WHITE_CALIB THEN adr_send:=ADR(WHITE_MSI); size:=SIZEOF(WHITE_MSI);
+		ELSIF BLACK_CALIB THEN adr_send:=ADR(BLACK_MSI); size:=SIZEOF(BLACK_MSI);
+		ELSIF SPEGNI THEN adr_send:=ADR(SHUT_DOWN_MSI); size:=SIZEOF(SHUT_DOWN_MSI);
+		ELSIF NOT ABIL_NIR THEN adr_send:=ADR(OFFLINE_MSI);size:=SIZEOF(OFFLINE_MSI);
+		ELSIF CMD_LOAD THEN  LOAD_ID_TMP[0]:=16#36;  LOAD_ID_TMP[1]:=NUM_LOAD_ID; LOAD_ID_TMP[2]:=16#F0; adr_send:=ADR(LOAD_ID_TMP);size:=SIZEOF(LOAD_ID_TMP);
+		ELSIF CMD_GET_TYPE THEN adr_send:=ADR(GET_TYPE_MSI);size:=SIZEOF(GET_TYPE_MSI);
+		ELSIF CMD_AUTOSAVE_START THEN adr_send:=ADR(AUTOSAVE_START);size:=SIZEOF(AUTOSAVE_START);
+		ELSIF CMD_AUTOSAVE_STOP THEN adr_send:=ADR(AUTOSAVE_STOP);size:=SIZEOF(AUTOSAVE_STOP);
+		ELSE adr_send:=ADR(ONLINE_MSI);size:=SIZEOF(ONLINE_MSI); END_IF
+		Spedisci_UDP(
+			sSrvNetId:= '',
+			hSocket:= hSocket_UDP ,
+			sRemoteHost:=IP_ADRESS_SENSOR_NIR ,
+			nRemotePort:=IP_PORT_SENSOR_NIR,
+			cbLen:=size ,
+			pSrc:= adr_send,
+			bExecute:= TRUE,
+			tTimeout:=DEFAULT_ADS_TIMEOUT ,
+			bBusy=> ,
+			bError=> ,
+			nErrId=> );
+		Spedisci_UDP(bExecute:= FALSE,);
+		IF NOT Spedisci_UDP.bBusy THEN
+			IF NOT Spedisci_UDP.bError THEN
+				IF ABIL_NIR THEN
+					IF Spegni THEN Stato:=3; ok_spegni:=TRUE; END_IF
+					Stato:=2;
+				ELSE
+					Stato:=3;
+					ABIL_NIR:=FALSE;
+				END_IF
+			ELSE
+				All_send:=TRUE;
+				Stato:=3;
+				ABIL_NIR:=FALSE;
+			END_IF
+		END_IF
+
+2:
+	IF NOT Aux_ricevi AND NOT WHITE_CALIB AND NOT BLACK_CALIB AND NOT CMD_LOAD AND NOT CMD_GET_TYPE AND NOT CMD_AUTOSAVE_START AND NOT CMD_AUTOSAVE_STOP THEN
+		Info_Msg[indice_msg_inf]:=1;
+		indice_msg_inf:=indice_msg_inf+1;
+		IF indice_msg_inf >= MAX_INF THEN indice_msg_inf:=0; END_IF
+		Aux_ricevi:=TRUE;
+		linee_nir_min:=1000;
+		linee_nir_max:=0;
+	END_IF
+	IF CMD_GET_TYPE THEN
+	MEMSET( ADR(RX_get_type), 0, SIZEOF(RX_get_type));
+	Ricevi_UDP(
+		sSrvNetId:='' ,
+		hSocket:=hSocket_UDP  ,
+		cbLen:=SIZEOF(RX_get_type) ,
+		pDest:=ADR(RX_get_type) ,
+		bExecute:= TRUE,
+		tTimeout:=DEFAULT_ADS_TIMEOUT ,
+		bBusy=> ,
+		bError=> ,
+		nErrId=> ,
+		sRemoteHost=> ,
+		nRemotePort=> ,
+		nRecBytes=> );
+	ELSE
+	Ricevi_UDP(
+		sSrvNetId:='' ,
+		hSocket:=hSocket_UDP  ,
+		cbLen:=RX_NUM_NIR ,
+		pDest:=ADR(RX_Tmp_MSI) ,
+		bExecute:= TRUE,
+		tTimeout:=DEFAULT_ADS_TIMEOUT ,
+		bBusy=> ,
+		bError=> ,
+		nErrId=> ,
+		sRemoteHost=> ,
+		nRemotePort=> ,
+		nRecBytes=> );
+	END_IF
+	Ricevi_UDP(bExecute:= FALSE);
+	IF NOT Ricevi_UDP.bBusy THEN
+		IF NOT Ricevi_UDP.bError THEN
+			IF Ricevi_UDP.nRecBytes >0 THEN
+				ricevuto:=TRUE;
+				elaborato:=FALSE;
+				IF MSI_ok AND NOT WHITE_CALIB AND NOT BLACK_CALIB AND NOT CMD_LOAD AND NOT CMD_GET_TYPE AND NOT CMD_AUTOSAVE_START AND NOT CMD_AUTOSAVE_STOP THEN
+					Linee_sec:=Linee_sec+1;
+					MSI_data[index_nir].Status_byte:=RX_Tmp_MSI[0];
+					MSI_data[index_nir].Scan_counter_high:=RX_Tmp_MSI[1];
+					MSI_data[index_nir].Scan_counter_middle:=RX_Tmp_MSI[2];
+					MSI_data[index_nir].Scan_counter_low:=RX_Tmp_MSI[3];
+					FOR indice:=1 TO Skip_ev DO
+						MSI_data[index_nir].track[indice]:=0;
+						MSI_elab[index_nir].track[indice]:=0;
+						MSI_elab[index_nir].perc_inq[indice]:=0;
+					END_FOR
+					FOR indice:=1 TO NUM_TRACKS_NIR DO
+						IF (Skip_ev+indice)>NUM_TRACKS_NIR THEN EXIT; END_IF;
+						MSI_data[index_nir].track[indice]:=RX_Tmp_MSI[3+Skip_ev+indice];
+						MSI_elab[index_nir].track[indice]:=RX_Tmp_MSI[3+Skip_ev+indice];
+						MSI_elab[index_nir].perc_inq[indice]:=0;
+						IF PROCESSING_DATA THEN
+							IF index_nir>0 THEN indice_calc:=index_nir-1; ELSE indice_calc:=BUFFER_SIZE; END_IF
+							IF index_nir>1 THEN indice_calc_2:=index_nir-2; ELSE indice_calc_2:=BUFFER_SIZE-1; END_IF
+							IF index_nir>2 THEN indice_calc_3:=index_nir-3; ELSE indice_calc_3:=BUFFER_SIZE-2; END_IF
+							IF index_nir>3 THEN indice_calc_4:=index_nir-4; ELSE indice_calc_4:=BUFFER_SIZE-3; END_IF
+							CASE step OF
+								1:
+								IF MSI_data[indice_calc].track[indice]<>SFONDO THEN
+									MSI_elab[index_nir].track[indice]:=SFONDO;
+									MSI_elab[index_nir].track_mat_select[indice]:=FALSE;
+								END_IF
+								2:
+								IF MSI_data[indice_calc].track[indice]<>SFONDO AND MSI_data[indice_calc_2].track[indice]<>SFONDO THEN
+									MSI_elab[index_nir].track[indice]:=SFONDO;
+									MSI_elab[index_nir].track_mat_select[indice]:=FALSE;
+								END_IF
+								3:
+								IF MSI_data[indice_calc].track[indice]<>SFONDO AND MSI_data[indice_calc_2].track[indice]<>SFONDO AND MSI_data[indice_calc_3].track[indice]<>SFONDO THEN
+									MSI_elab[index_nir].track[indice]:=SFONDO;
+									MSI_elab[index_nir].track_mat_select[indice]:=FALSE;
+								END_IF
+								4:
+								IF MSI_data[indice_calc].track[indice]<>SFONDO AND MSI_data[indice_calc_2].track[indice]<>SFONDO AND MSI_data[indice_calc_3].track[indice]<>SFONDO AND MSI_data[indice_calc_4].track[indice]<>SFONDO  THEN
+									MSI_elab[index_nir].track[indice]:=SFONDO;
+									MSI_elab[index_nir].track_mat_select[indice]:=FALSE;
+								END_IF
+							END_CASE
+						END_IF
+						LED_TEMP_NIR:=RX_Tmp_MSI[0].1 OR  (RX_Tmp_MSI[0].6 AND RX_Tmp_MSI[0].4);
+						LED_CALIB_NIR:=RX_Tmp_MSI[0].5;
+						Visu_track[indice]:=SFONDO;
+						Visu_track[indice]:=MSI_data[index_nir].track[indice];
+						IF MSI_data[index_nir].track[indice] <>SFONDO THEN num_obj[indice]:=num_obj[indice]+1; END_IF
+						IF MSI_data[index_nir].track[indice]<> SFONDO THEN
+							 Perc_carico_parz:=Perc_carico_parz+1; Perc_carico_parz_min:=Perc_carico_parz_min+1;
+							matrix_visu[riga,indice]:=MSI_data[index_nir].track[indice];
+						ELSE
+							matrix_visu[riga,indice]:=0;
+						END_IF
+						IF start_storico THEN
+							IF NOT full THEN
+								IF MSI_data[index_nir].track[indice]<>SFONDO THEN
+									storico_1[riga_storico,indice]:=MSI_data[index_nir].track[indice];
+								ELSE
+									storico_1[riga_storico,indice]:=0;
+								END_IF
+							ELSE
+								IF MSI_data[index_nir].track[indice]<>SFONDO THEN
+									storico_2[riga_storico,indice]:=MSI_data[index_nir].track[indice];
+								ELSE
+									storico_2[riga_storico,indice]:=0;
+								END_IF
+							END_IF
+						END_IF
+						MSI_data[index_nir].track_mat_select[indice]:=FALSE;
+						MSI_data[index_nir].track_mat_inq[indice]:=FALSE;
+						MSI_elab[index_nir].track_mat_select[indice]:=FALSE;
+						IF MSI_data[index_nir].track[indice]<> SFONDO AND MSI_data[index_nir].track[indice]<>0 THEN
+							FOR i:=0 TO NUM_CODICI DO
+								IF CODICI_MATERIALI[i]<> 0 OR NOMI_MATERIALI[i,1]<>0 THEN
+									IF MSI_data[index_nir].track[indice]=CODICI_MATERIALI[i] THEN
+										MSI_data[index_nir].indice_codice_mat[indice]:=i;
+										IF MATERIALI_ATTIVI[i] THEN
+											MSI_data[index_nir].track_mat_select[indice]:=TRUE;
+											MSI_elab[index_nir].track_mat_select[indice]:=TRUE;
+										ELSE
+											MSI_data[index_nir].track_mat_inq[indice]:=TRUE;
+										END_IF
+										NUM_CAMPIONATI[i]:=NUM_CAMPIONATI[i]+1;
+										EXIT;
+									END_IF
+								ELSE
+									EXIT;
+								END_IF
+							END_FOR
+						END_IF
+						IF MSI_data[index_nir].track[indice]<> SFONDO AND  MSI_data[index_nir].track[indice]<>0 AND indice<=25 AND start_pezzo THEN
+							IF NOT pezzo_presente THEN indice_start:=index_nir; END_IF
+							pezzo_presente:=TRUE;
+						END_IF
+						IF indice<=25 AND start_pezzo AND MSI_data[index_nir].track[indice]<> SFONDO THEN
+							matrix_data[indice_data,indice]:=MSI_data[index_nir].track[indice];
+							matrix_data_bool[indice_data,indice]:=MSI_data[index_nir].track_mat_select[indice];
+							matrix_data_bool_inq[indice_data,indice]:=MSI_data[index_nir].track_mat_inq[indice];
+						END_IF
+						IF MSI_data[index_nir].track[indice]= SFONDO AND start_pezzo AND pezzo_presente AND indice<=25 THEN
+							aux_pixel:=aux_pixel+1;
+						END_IF
+					END_FOR
+					n_volte:=n_volte+1;
+					n_volte_min:=n_volte_min+1;
+					MSI_data[index_nir].End_of_file:=RX_Tmp_MSI[NUM_TRACKS_NIR+4];
+					MSI_data[index_nir].Position:=0;
+					MSI_data[index_nir].esplus_effettuata:=FALSE;
+					MSI_elab[index_nir].Position:=0;
+					MSI_elab[index_nir].esplus_effettuata:=FALSE;
+					IF SPEED>0.5 THEN
+						IF index_nir<1 THEN
+							High_prec:=SHR(MSI_data[BUFFER_SIZE].Scan_counter_low ,4);
+							Low_prec:=MSI_data[BUFFER_SIZE].Scan_counter_low AND 2#00001111;
+							IF Low_prec <9 THEN Scan_calc:=SHL(High_prec,4)+Low_prec+1; ELSE IF High_prec<9 THEN Scan_calc:=SHL(High_prec+1,4); ELSE Scan_calc:=0; END_IF END_IF
+							IF Scan_calc <> MSI_data[index_nir].Scan_counter_low THEN Dati_error:=TRUE; END_IF
+						ELSE
+							High_prec:=SHR(MSI_data[index_nir-1].Scan_counter_low ,4);
+							Low_prec:=MSI_data[index_nir-1].Scan_counter_low AND 2#00001111;
+							IF Low_prec <9 THEN Scan_calc:=SHL(High_prec,4)+Low_prec+1; ELSE IF High_prec<9 THEN Scan_calc:=SHL(High_prec+1,4); ELSE Scan_calc:=0; END_IF END_IF
+							IF Scan_calc <> MSI_data[index_nir].Scan_counter_low THEN Dati_error:=TRUE; END_IF
+						END_IF
+					END_IF
+					IF aux_pixel>=25 THEN pezzo_presente:=FALSE;aux_pixel:=0;start_pezzo:=FALSE; indice_stop:=index_nir; pezzo_pres_elab:=TRUE;END_IF
+					IF start_pezzo  AND pezzo_presente THEN indice_data:=indice_data+1; aux_pixel:=0; IF indice_data>24 THEN pezzo_presente:=FALSE;aux_pixel:=0;start_pezzo:=FALSE; indice_stop:=index_nir; pezzo_pres_elab:=TRUE; END_IF END_IF
+					index_nir:=index_nir+1;
+					IF index_nir >BUFFER_SIZE THEN index_nir:=0; END_IF
+					riga:=riga+1;
+					IF riga >BUFFER_VISU THEN riga:=0; END_IF
+					IF start_storico THEN
+						riga_storico:=riga_storico+1;
+						IF riga_storico>BUFFER_STORICO THEN
+							riga_storico:=0;
+							IF full THEN storico_full_2:=TRUE; END_IF
+							IF NOT full THEN storico_full_1:=TRUE; END_IF
+							full:=NOT full;
+						END_IF
+					END_IF
+				END_IF
+				IF WHITE_CALIB AND RX_Tmp_MSI[0] = 16#02 THEN
+					IF RX_Tmp_MSI[1] = 16#35 THEN
+						IF RX_Tmp_MSI[2] = 16#00 AND RX_Tmp_MSI[3] = 16#F0 THEN
+							WHITE_CALIB:=FALSE; calib_ok:=FALSE;
+							Info_Msg[indice_msg_inf]:=2; indice_msg_inf:=indice_msg_inf+1;
+							IF indice_msg_inf >= MAX_INF THEN indice_msg_inf:=0; END_IF
+							MSI_ok:=TRUE;
+						ELSE
+							WHITE_CALIB:=FALSE; calib_ok:=FALSE; All_calibr_white:=TRUE; MSI_ok:=TRUE; Stato:=1;
+						END_IF
+					END_IF
+				END_IF
+				IF BLACK_CALIB AND RX_Tmp_MSI[0] = 16#02 THEN
+					IF RX_Tmp_MSI[1] = 16#3A THEN
+						IF RX_Tmp_MSI[2] = 16#00 AND RX_Tmp_MSI[3] = 16#F0 THEN
+							BLACK_CALIB:=FALSE; calib_ok:=FALSE;
+							Info_Msg[indice_msg_inf]:=4; indice_msg_inf:=indice_msg_inf+1;
+							IF indice_msg_inf >= MAX_INF THEN indice_msg_inf:=0; END_IF
+							MSI_ok:=TRUE;
+						ELSE
+							BLACK_CALIB:=FALSE; calib_ok:=FALSE; MSI_ok:=TRUE; All_calibr_black:=TRUE; Stato:=1;
+						END_IF
+					END_IF
+				END_IF
+				IF CMD_LOAD AND RX_Tmp_MSI[0] = 16#02 THEN
+					IF RX_Tmp_MSI[1] = 16#36 THEN
+						IF  RX_Tmp_MSI[2] = 16#00 AND RX_Tmp_MSI[3] = 16#F0 THEN
+							CMD_LOAD:=FALSE; calib_ok:=FALSE; MSI_ok:=TRUE;
+						ELSE
+							CMD_LOAD:=FALSE; calib_ok:=FALSE; MSI_ok:=TRUE; All_load:=TRUE;
+						END_IF
+					END_IF
+				END_IF
+				IF CMD_GET_TYPE AND RX_get_type[0] = 16#02 THEN
+					IF RX_get_type[1] = 16#32 AND RX_get_type[2] = 16#01 THEN
+						MEMSET( ADR(CODICI_MATERIALI), 0, SIZEOF(CODICI_MATERIALI));
+						MEMSET( ADR(NOMI_MATERIALI), 0, SIZEOF(NOMI_MATERIALI));
+						indice_codice:=3;
+						FOR index_type:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+							IF RX_get_type[indice_codice] <> 16#F0 THEN
+								CODICI_MATERIALI[index_type]:=RX_get_type[indice_codice];
+								indice_materiale:=indice_codice+1;
+								FOR i_nome:=1 TO 28 DO
+									IF RX_get_type[indice_materiale] <> 00 THEN
+										NOMI_MATERIALI[index_type,i_nome]:=RX_get_type[indice_materiale];
+ 										indice_materiale:=indice_materiale+1;
+										IF indice_materiale > SIZEOF(RX_get_type)  THEN  EXIT; END_IF
+									ELSE
+										NUM_CODICI:=index_type;
+										EXIT;
+									END_IF
+								END_FOR
+								indice_codice:=indice_materiale+1;
+								IF indice_codice > SIZEOF(RX_get_type)  THEN  EXIT; END_IF
+							ELSE
+								EXIT;
+							END_IF
+						END_FOR
+						CMD_GET_TYPE:=FALSE; calib_ok:=FALSE; MSI_ok:=TRUE; OK_CMD_GET_TYPE:=NOT OK_CMD_GET_TYPE;
+					ELSE
+						All_get_type:=TRUE; CMD_GET_TYPE:=FALSE; calib_ok:=FALSE; MSI_ok:=TRUE;
+					END_IF
+				END_IF
+				IF (CMD_AUTOSAVE_START OR  CMD_AUTOSAVE_STOP) AND RX_Tmp_MSI[0] = 16#02 THEN
+					IF RX_Tmp_MSI[1] = 16#33 AND RX_Tmp_MSI[2] = 16#00 AND RX_Tmp_MSI[3] = 16#07 AND RX_Tmp_MSI[4] = 16#F0 THEN
+						calib_ok:=FALSE; MSI_ok:=TRUE; CMD_AUTOSAVE_START:=FALSE; CMD_AUTOSAVE_STOP:=FALSE;
+					END_IF
+				END_IF
+ 				IF NOT MSI_OK AND NOT BLACK_CALIB AND NOT WHITE_CALIB AND NOT CMD_LOAD AND RX_Tmp_MSI[0] = 16#02 THEN
+					IF RX_Tmp_MSI[1] = 16#34 THEN
+						IF RX_Tmp_MSI[2] = 16#00 OR  RX_Tmp_MSI[2] = 16#01 THEN
+							IF RX_Tmp_MSI[3] = 16#F0 THEN MSI_ok:=TRUE; END_IF
+						ELSE
+							All_nir:=TRUE; ABIL_NIR:=FALSE; Stato:=1;
+						END_IF
+					END_IF
+				END_IF
+			END_IF
+			ELSE
+				Stato:=0; primo_avvio:=FALSE;
+		END_IF
+	END_IF
+
+3:
+	Ricevi_UDP(bExecute:= FALSE);
+	Aux_ricevi:=FALSE;
+	Chiudi_UDP(
+		sSrvNetId:='' ,
+		bExecute:= TRUE,
+		tTimeout:=DEFAULT_ADS_TIMEOUT ,
+		bBusy=> ,
+		bError=> ,
+		nErrId=> );
+	IF NOT Chiudi_UDP.bBusy THEN
+		IF NOT Chiudi_UDP.bError THEN
+			Chiudi_UDP(bExecute:= FALSE,);
+			MEMSET( ADR(hSocket_UDP), 0, SIZEOF(hSocket_UDP));
+			MSI_ok:=FALSE; index_nir:=0;
+			MEMSET(ADR(RX_Tmp_MSI),0, SIZEOF(RX_Tmp_MSI));
+			Stato:=99; ABIL_NIR:=FALSE;
+		ELSE
+			MEMSET( ADR(hSocket_UDP), 0, SIZEOF(hSocket_UDP));
+			Chiudi_UDP(bExecute:= FALSE,);
+			Stato:=99; ABIL_NIR:=FALSE;
+		END_IF
+	END_IF
+END_CASE
+IF NOT ABIL_NIR THEN calib_ok:=FALSE; END_IF
+IF WHITE_CALIB AND NOT (ABIL_NIR AND SPEED=0 AND NOT BLACK_CALIB AND (Stato = 2 OR calib_ok) ) THEN  MSG_ERRORE_CALIB:=TRUE; END_IF
+IF WHITE_CALIB AND ABIL_NIR AND SPEED=0 AND (Stato = 2 OR calib_ok) THEN calib_ok:=TRUE; All_calibr_white:=FALSE; ELSE WHITE_CALIB:=FALSE; END_IF
+IF BLACK_CALIB AND NOT (ABIL_NIR AND NOT WHITE_CALIB AND (Stato = 2 OR calib_ok) ) THEN  MSG_ERRORE_CALIB:=TRUE; END_IF
+IF BLACK_CALIB AND ABIL_NIR  AND (Stato = 2 OR calib_ok) THEN calib_ok:=TRUE; All_calibr_black:=FALSE; ELSE BLACK_CALIB:=FALSE; calib_done_auto:=TRUE; END_IF
+IF Black_automatic_perc>0.0 THEN
+	Delay_auto_calib(IN:=calib_done_auto, PT:=T#300S , Q=> , ET=> );
+	IF Delay_auto_calib.Q THEN calib_done_auto:=FALSE; END_IF
+	IF Perc_carico>Black_automatic_perc AND NOT calib_done_auto THEN BLACK_CALIB:=TRUE; END_IF
+ELSE
+	calib_done_auto:=FALSE;
+END_IF
+IF CMD_LOAD  AND ABIL_NIR AND (Stato = 2 OR calib_ok) THEN calib_ok:=TRUE; ELSE CMD_LOAD:=FALSE; END_IF
+IF CMD_GET_TYPE  AND ABIL_NIR AND (Stato = 2 OR calib_ok) THEN calib_ok:=TRUE; ELSE CMD_GET_TYPE:=FALSE; END_IF
+IF CMD_AUTOSAVE_START  AND ABIL_NIR AND (Stato = 2 OR calib_ok) THEN calib_ok:=TRUE; ELSE CMD_AUTOSAVE_START:=FALSE; END_IF
+IF CMD_AUTOSAVE_STOP AND ABIL_NIR AND (Stato = 2 OR calib_ok) THEN calib_ok:=TRUE; ELSE CMD_AUTOSAVE_STOP:=FALSE; END_IF
+spegni_nir(CLK:=SPEGNI , Q=> );
+trig_calib(CLK:=calib_ok , Q=> );
+IF trig_calib.Q OR spegni_nir.Q THEN IF hSocket_UDP.handle <> 0 THEN Stato:=1; ELSE Stato:=0; END_IF END_IF
+error_MSI(IN:=(Stato=2 AND MSI_ok=FALSE) , PT:=T#20S , Q=> , ET=> );
+IF error_MSI.Q THEN All_link:=TRUE; ABIL_NIR:=FALSE; Stato:=3; END_IF
+IF Stato=2 AND MSI_ok AND (ENCODER_OK OR Trig_option) AND ABIL_NIR THEN NIR_ATTIVO:=TRUE; ELSE NIR_ATTIVO:=FALSE; END_IF
+NUM_CICLI:=NUM_CICLI+1;
+IF NUM_CICLI>=5000 THEN
+	NUM_CICLI:=0;
+	Linee:=Linee_sec;
+	Linee_sec:=0;
+	Perc_carico:=0;
+	IF n_volte>0 AND Fattore_carico>0 AND NIR_ATTIVO AND speed>0 THEN
+		Perc_carico:=Fattore_carico*100*Perc_carico_parz/n_volte/NUM_TRACKS_NIR;
+		IF Perc_carico>100 THEN Perc_carico:=100; END_IF
+	END_IF
+	Perc_carico_parz:=0;
+	n_volte:=0;
+END_IF
+wr_data(
+	NETID:='' ,
+	PORT:=801 ,
+	START:=SALVA_DATI ,
+	TMOUT:=DEFAULT_ADS_TIMEOUT ,
+	BUSY=> ,
+	ERR=> ,
+	ERRID=> );
+	IF SALVA_DATI AND NOT wr_data.ERR THEN
+		IF SALVA_DATI AND NOT wr_data.BUSY THEN
+			SALVA_DATI:=FALSE;
+			IF salva_dati_auto THEN ok_dati_salvati:=TRUE; END_IF
+			Info_Msg[indice_msg_inf]:=3; indice_msg_inf:=indice_msg_inf+1;
+			IF indice_msg_inf >= MAX_INF THEN indice_msg_inf:=0; END_IF
+		END_IF
+	END_IF
+fs_riavvio(CLK:=Riavvio , Q=> );
+IF spegni_nir.Q OR fs_riavvio.Q  THEN salva_dati_auto:=TRUE; SALVA_DATI:=TRUE; END_IF
+shut_down(
+	NETID:= '',
+	DELAY:= 2,
+	START:= ok_spegni AND ok_dati_salvati,
+	TMOUT:=DEFAULT_ADS_TIMEOUT ,
+	BUSY=> ,
+	ERR=> ,
+	ERRID=> );
+reboot(
+	NETID:='' ,
+	DELAY:= 2,
+	START:= riavvio AND ok_dati_salvati,
+	TMOUT:=DEFAULT_ADS_TIMEOUT ,
+	BUSY=> ,
+	ERR=> ,
+	ERRID=> );
+IF Linee=0 OR Stato<>2 THEN ETH_LINK_OK:=FALSE; ELSE ETH_LINK_OK:=TRUE; END_IF
+rit_viu_eth(IN:=NOT ETH_LINK_OK , PT:=T#2S , Q=> , ET=> );
+IF ETH_LINK_OK THEN ETH_LINK_OK_VISU:=TRUE; END_IF
+IF rit_viu_eth.Q THEN ETH_LINK_OK_VISU:=FALSE; LED_TEMP_NIR:=TRUE; LED_CALIB_NIR:=TRUE; END_IF
+IF linee_nir_max < Linee AND ETH_LINK_OK THEN linee_nir_max:=Linee; END_IF
+IF linee_nir_min > Linee AND ETH_LINK_OK THEN linee_nir_min:=Linee; END_IF
+Ritardo(IN:=NIR_ATTIVO AND ETH_LINK_OK , PT:=t#3S , Q=> , ET=> );
+Ritardo_off(IN:=ABIL_NIR AND NOT NIR_ATTIVO , PT:=t#20S , Q=> , ET=> );
+IF Ritardo_off.Q THEN ABIL_NIR:=FALSE; END_IF
+R_Dati_error(CLK:=Dati_error , Q=> );
+IF R_Dati_error.Q AND Ritardo.Q THEN All_dati:=TRUE; N_error_pack:=N_error_pack+1; END_IF
+Dati_error:=FALSE;
+ritardo_linee(IN:=(Stato=2 AND linee=0 AND MSI_ok AND NOT WHITE_CALIB AND NOT BLACK_CALIB AND NOT CMD_LOAD) , PT:=T#1S , Q=> , ET=> );
+fronte_ritardo_linee(CLK:=ritardo_linee.Q, Q=>);
+fronte_ritardo_linee_ok(CLK:=(Stato=2 AND linee<>0), Q=>);
+IF fronte_ritardo_linee.Q THEN All_link:=TRUE; END_IF
+IF fronte_ritardo_linee_ok.Q THEN All_link:=FALSE; END_IF
+Ton_err_con(IN:=(Stato=2 AND linee<150 AND MSI_ok AND NOT WHITE_CALIB AND NOT BLACK_CALIB AND NOT CMD_LOAD AND SPEED>0.5 ), PT:=T#10S , Q=> , ET=> );
+Errore_connessione_sensore:= Ton_err_con.Q OR  All_sens_scoll_1 OR All_sens_scoll_2 OR All_send OR All_nir OR All_calibr_black OR All_calibr_white OR All_load OR All_get_type;
+IF cancella THEN
+	cancella_espulsione:=TRUE; cancella_encoder:=TRUE;
+	All_dati:=FALSE; All_sens_scoll_1:=FALSE; All_sens_scoll_2:=FALSE;
+	All_send:=FALSE; All_nir:=FALSE; All_link:=FALSE;
+	All_calibr_black:=FALSE; All_calibr_white:=FALSE;
+	All_load:=FALSE; All_get_type:=FALSE;
+	cancella:=FALSE;
+END_IF
+IF (stato=99 OR ETH_LINK_OK=FALSE) AND Spegni THEN ok_spegni:=TRUE;END_IF
+IF Stato=99 AND NOT WHITE_CALIB AND NOT BLACK_CALIB AND NOT CMD_LOAD THEN
+	FOR indice_visu:=1 TO NUM_TRACKS_NIR DO Visu_track[indice_visu]:=990; END_FOR
+END_IF
+ritardo_error(IN:=NOT ETH_LINK_OK AND Stato=2 AND NOT WHITE_CALIB AND NOT BLACK_CALIB AND NOT CMD_LOAD, PT:=T#1S , Q=> , ET=> );
+IF ritardo_error.Q THEN
+	FOR indice_visu:=1 TO NUM_TRACKS_NIR DO Visu_track[indice_visu]:=999; END_FOR
+END_IF
+reset_visu(CLK:=(stato <>2) , Q=> );
+IF reset_visu.Q THEN MEMSET(ADR(Matrix_visu),0, SIZEOF(Matrix_visu)); END_IF
+IF index_nir >= (LUNGHEZZA_REGIONE+1) THEN row_index:=index_nir-(LUNGHEZZA_REGIONE+1); ELSE row_index:=BUFFER_SIZE+index_nir-(LUNGHEZZA_REGIONE+1)+1;END_IF
+IF NOT ricevuto AND NOT elaborato AND PROCESSING_DATA AND (step=99 OR step=91 OR step=92 OR step=93 OR step=94)  AND NIR_ATTIVO THEN
+	elaborato:=TRUE;
+	FOR indice:=1 TO NUM_TRACKS_NIR DO
+		Pixel_inquinanti:=0; Pixel_ok:=0;
+		IF MSI_data[row_index].track_mat_select[indice] THEN
+			FOR col_process:=0 TO LARGHEZZA_REGIONE*2 DO
+				IF indice-LARGHEZZA_REGIONE+col_process>=1 AND indice-LARGHEZZA_REGIONE+col_process<=NUM_TRACKS_NIR THEN
+					indice_colonna:=indice+col_process-LARGHEZZA_REGIONE;
+					FOR riga_process:=0 TO LUNGHEZZA_REGIONE*2 DO
+						IF row_index+riga_process-LUNGHEZZA_REGIONE>=0 AND row_index+riga_process-LUNGHEZZA_REGIONE<=BUFFER_SIZE THEN
+							row_index_cal:=row_index-LUNGHEZZA_REGIONE+riga_process;
+						ELSE
+							IF row_index+riga_process-LUNGHEZZA_REGIONE <0 THEN row_index_cal:=row_index+BUFFER_SIZE+1+riga_process-LUNGHEZZA_REGIONE; END_IF
+							IF row_index+riga_process-LUNGHEZZA_REGIONE >BUFFER_SIZE THEN row_index_cal:=row_index+riga_process-LUNGHEZZA_REGIONE-(BUFFER_SIZE+1); END_IF
+						END_IF
+						IF MSI_data[row_index_cal].track_mat_inq[indice_colonna] THEN Pixel_inquinanti:=Pixel_inquinanti+1; END_IF
+						IF MSI_data[row_index_cal].track_mat_select[indice_colonna] THEN Pixel_ok:=Pixel_ok+1; END_IF
+					END_FOR
+				END_IF
+			END_FOR
+			totale:=UDINT_TO_REAL(Pixel_ok+Pixel_inquinanti);
+			IF totale>0 THEN
+				percentuale:=Pixel_inquinanti/totale*100;
+				MSI_elab[row_index].perc_inq[indice]:=percentuale;
+				IF percentuale>=PERC_INQUINAMENTO THEN
+					MSI_elab[row_index].track[indice]:=SFONDO;
+					MSI_elab[row_index].track_mat_select[indice]:=FALSE;
+				END_IF
+			END_IF
+		END_IF
+	END_FOR
+END_IF
+IF pezzo_pres_elab THEN
+	IF row_index >= indice_stop THEN
+		IF indice_start<indice_stop THEN indice_stop_calc:=indice_stop; ELSE indice_stop_calc:=indice_stop+BUFFER_SIZE+1; END_IF
+		i_elab:=0;
+		FOR i:=indice_start TO indice_stop_calc DO
+			IF i>BUFFER_SIZE THEN i_calc:=i-BUFFER_SIZE-1; ELSE i_calc:=i; END_IF
+			FOR indice:=1 TO 25 DO
+				matrix_elab[i_elab,indice]:=MSI_elab[i_calc].track[indice];
+				matrix_elab_bool[i_elab,indice]:=MSI_elab[i_calc].track_mat_select[indice];
+				matrix_elab_perc[i_elab,indice]:=MSI_elab[i_calc].perc_inq[indice];
+			END_FOR
+			i_elab:=i_elab+1;
+			IF i_elab>24 THEN EXIT; END_IF
+		END_FOR
+	pezzo_pres_elab:=FALSE;
+	END_IF
+END_IF
+fornte_n_start(CLK:=Start_pezzo , Q=> );
+IF fornte_n_start.Q THEN indice_data:=0; END_IF
+IF SystemTaskInfoArr[2].lastExecTime>max_time_task THEN max_time_task:=SystemTaskInfoArr[2].lastExecTime; END_IF
+IF SystemTaskInfoArr[2].cycleTimeExceeded THEN count_exceed:=count_exceed+1;END_IF
+END_PROGRAM

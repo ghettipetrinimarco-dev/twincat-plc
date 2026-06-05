@@ -1,0 +1,269 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* @SYMFILEFLAGS := '2048' *)
+(*
+    PROGRAM Processing_Robot
+    =========================
+    Task Elaboration — 10ms, Priorità 2
+
+    Differenze rispetto a Processing selezionatrice:
+    RIMOSSO:  Modbus mapping, sistema licenza ENABLE, DISTANZA_EV,
+              calcolo peso/kg, Modbus_Area
+    AGGIUNTO: statistiche robot (pick/min, efficienza, coda status),
+              allarme coda piena, reset periodico UiTag
+
+    Statistiche calcolate ogni secondo:
+      - PICK_AL_MINUTO: pick confermati dal robot nell'ultimo minuto
+      - EFFICIENZA_PICK: % oggetti rilevati che vengono pickati
+      - CODA_UTILIZZO: % slot OBJ_queue occupati
+*)
+PROGRAM Processing_Robot
+VAR
+    (* --- Timer 1 secondo --- *)
+    tempo_on            : TON;
+    tempo_off           : TON;
+    in_timer            : BOOL := TRUE;
+    fronte_timer        : R_TRIG;
+    inc_sec             : UINT;
+
+    (* --- Timer 1 minuto --- *)
+    tempo_on_min        : TON;
+    tempo_off_min       : TON;
+    in_timer_min        : BOOL := TRUE;
+    fronte_timer_min    : R_TRIG;
+
+    (* --- Data/ora --- *)
+    fb_data_ora         : NT_GetTime;
+    start_time          : BOOL;
+
+    (* --- CPU --- *)
+    usage               : TC_CpuUsage;
+
+    (* --- Statistiche materiali --- *)
+    i                   : INT;
+    i_reset             : INT;
+    Totale_campionato   : UDINT;
+    Totale_selezionato  : UDINT;
+
+    (* --- Statistiche robot --- *)
+    pick_confermati_parz : INT;     (* snapshot UiTag_robot all'inizio del minuto *)
+    campionati_prev      : UDINT;   (* snapshot Totale_campionato all'inizio del minuto *)
+    obj_rilevati_parz   : UDINT;    (* oggetti rilevati nell'ultimo minuto (delta) *)
+    coda_slot_occupati  : INT;
+
+    (* --- Allarmi --- *)
+    fronte_coda_piena   : R_TRIG;
+
+    (* --- Diagnostica task --- *)
+    max_time_task       : UDINT;
+    count_exceed        : UDINT;
+
+    (* --- Partial statistics --- *)
+    fronte_start        : R_TRIG;
+    fronte_stop         : F_TRIG;
+    indice_cod          : INT;
+    Totale_perc_camp_parz : UDINT;
+END_VAR
+(* @END_DECLARATION := '0' *)
+
+
+(* ================================================================
+   Timer 1 secondo
+   ================================================================ *)
+tempo_on(IN:=in_timer, PT:=T#1S, Q=>);
+IF tempo_on.Q THEN in_timer:=FALSE; END_IF
+tempo_off(IN:=NOT in_timer, PT:=T#1MS, Q=>);
+IF tempo_off.Q THEN in_timer:=TRUE; END_IF
+fronte_timer(CLK:=in_timer, Q=>);
+IF fronte_timer.Q THEN
+    start_time:=TRUE;
+    inc_sec:=inc_sec+1;
+END_IF
+IF inc_sec >= 3 THEN SPEED_OLD:=SPEED; inc_sec:=0; END_IF
+
+SPEED_DELAY(IN:=(SPEED>0.1 AND ABS(SPEED-SPEED_OLD)<0.3), PT:=T#3S, Q=>, ET=>);
+
+(* ================================================================
+   Timer 1 minuto — statistiche robot
+   ================================================================ *)
+tempo_on_min(IN:=in_timer_min, PT:=T#60S, Q=>);
+IF tempo_on_min.Q THEN in_timer_min:=FALSE; END_IF
+tempo_off_min(IN:=NOT in_timer_min, PT:=T#1MS, Q=>);
+IF tempo_off_min.Q THEN in_timer_min:=TRUE; END_IF
+fronte_timer_min(CLK:=in_timer_min, Q=>);
+
+IF fronte_timer_min.Q THEN
+    TEMPO_ORA := TEMPO_ORA + 1;
+
+    (* Pick confermati al minuto — delta UiTag_robot nell'ultimo minuto *)
+    PICK_AL_MINUTO := UiTag_robot - pick_confermati_parz;
+    IF PICK_AL_MINUTO < 0 THEN
+        (* Gestione wrap: UiTag_robot è stato resettato a 0 durante il minuto *)
+        PICK_AL_MINUTO := UiTag_robot;
+    END_IF
+    pick_confermati_parz := UiTag_robot;
+
+    (* Oggetti rilevati al minuto — delta Totale_campionato nell'ultimo minuto *)
+    IF Totale_campionato >= campionati_prev THEN
+        obj_rilevati_parz := Totale_campionato - campionati_prev;
+    ELSE
+        obj_rilevati_parz := Totale_campionato;  (* wrap UDINT — improbabile *)
+    END_IF
+    campionati_prev := Totale_campionato;
+
+    (* Efficienza: pick / oggetti rilevati — entrambi delta dell'ultimo minuto *)
+    IF obj_rilevati_parz > 0 THEN
+        EFFICIENZA_PICK := INT_TO_REAL(PICK_AL_MINUTO) * 100.0
+                           / UDINT_TO_REAL(obj_rilevati_parz);
+        IF EFFICIENZA_PICK > 100.0 THEN EFFICIENZA_PICK := 100.0; END_IF
+    ELSE
+        EFFICIENZA_PICK := 0.0;
+    END_IF
+END_IF
+
+(* ================================================================
+   Data e ora
+   ================================================================ *)
+fb_data_ora(
+    NETID   := '',
+    START   := start_time,
+    TMOUT   := DEFAULT_ADS_TIMEOUT,
+    BUSY=>  ,
+    ERR=>   ,
+    ERRID=> ,
+    TIMESTR => DATA_ORA);
+start_time := FALSE;
+
+(* ================================================================
+   CPU usage
+   ================================================================ *)
+usage(NETID:='', START:=TRUE, TMOUT:=DEFAULT_ADS_TIMEOUT,
+      BUSY=>, ERR=>, ERRID=>, USAGE=>CPU_USAGE);
+usage(START:=FALSE);
+
+(* ================================================================
+   Percentuali materiali campionati
+   ================================================================ *)
+Totale_campionato := 0;
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+    Totale_campionato := Totale_campionato + NUM_CAMPIONATI[i];
+END_FOR
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+    IF Totale_campionato > 0 THEN
+        PERC_CAMPIONATI[i] := UDINT_TO_REAL(NUM_CAMPIONATI[i]) * 100.0
+                              / UDINT_TO_REAL(Totale_campionato);
+    ELSE
+        PERC_CAMPIONATI[i] := 0.0;
+    END_IF
+END_FOR
+
+(* ================================================================
+   Percentuali materiali campionati — parziale
+   ================================================================ *)
+fronte_start(CLK:=START_PARZIALE, Q=>);
+IF fronte_start.Q THEN
+    FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+        NUM_CAMPIONATI_PARZIALI_tmp[i] := NUM_CAMPIONATI[i];
+    END_FOR
+END_IF
+fronte_stop(CLK:=START_PARZIALE, Q=>);
+
+Totale_perc_camp_parz := 0;
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+    IF START_PARZIALE THEN
+        IF NUM_CAMPIONATI[i] >= NUM_CAMPIONATI_PARZIALI_tmp[i] THEN
+            NUM_CAMPIONATI_PARZIALI[i] := NUM_CAMPIONATI[i] - NUM_CAMPIONATI_PARZIALI_tmp[i];
+        ELSE
+            NUM_CAMPIONATI_PARZIALI[i] := NUM_CAMPIONATI_PARZIALI_tmp[i] - NUM_CAMPIONATI[i];
+        END_IF
+    END_IF
+    Totale_perc_camp_parz := Totale_perc_camp_parz + NUM_CAMPIONATI_PARZIALI[i];
+END_FOR
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+    IF Totale_perc_camp_parz > 0 THEN
+        PERC_CAMPIONATI_PARZIALI[i] := UDINT_TO_REAL(NUM_CAMPIONATI_PARZIALI[i]) * 100.0
+                                       / UDINT_TO_REAL(Totale_perc_camp_parz);
+    ELSE
+        PERC_CAMPIONATI_PARZIALI[i] := 0.0;
+    END_IF
+END_FOR
+
+(* ================================================================
+   Percentuali materiali selezionati (= pickati)
+   ================================================================ *)
+Totale_selezionato := 0;
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+    Totale_selezionato := Totale_selezionato + NUM_SELEZIONATI[i];
+END_FOR
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+    IF Totale_selezionato > 0 THEN
+        PERC_SELEZIONATI[i] := UDINT_TO_REAL(NUM_SELEZIONATI[i]) * 100.0
+                               / UDINT_TO_REAL(Totale_selezionato);
+    ELSE
+        PERC_SELEZIONATI[i] := 0.0;
+    END_IF
+END_FOR
+
+(* ================================================================
+   Stato coda pick
+   ================================================================ *)
+IF obj_head >= obj_tail THEN
+    coda_slot_occupati := obj_head - obj_tail;
+ELSE
+    coda_slot_occupati := MAX_OBJ_QUEUE + 1 - obj_tail + obj_head;
+END_IF
+CODA_UTILIZZO := INT_TO_REAL(coda_slot_occupati) * 100.0 / INT_TO_REAL(MAX_OBJ_QUEUE);
+
+(* Allarme coda piena *)
+fronte_coda_piena(CLK:=ROBOT_CODA_PIENA, Q=>);
+IF fronte_coda_piena.Q THEN
+    INFO_MSG[INDICE_MSG_INF] := 10;  (* codice: 10 = coda pick satura *)
+    INDICE_MSG_INF := INDICE_MSG_INF + 1;
+    IF INDICE_MSG_INF >= MAX_INF THEN INDICE_MSG_INF := 0; END_IF
+END_IF
+
+(* ================================================================
+   Macchina pronta
+   ================================================================ *)
+Macchina_pronta := SPEED > 0.5 AND NIR_ATTIVO AND DIAGNOSTICA_OK AND NOT ROBOT_CODA_PIENA;
+
+(* ================================================================
+   Reset contatori
+   ================================================================ *)
+IF RESET_SELEZIONATI THEN
+    FOR i_reset:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+        NUM_SELEZIONATI[i_reset] := 0;
+    END_FOR
+    RESET_SELEZIONATI := FALSE;
+END_IF
+IF RESET_CAMPIONATI THEN
+    FOR i_reset:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+        NUM_CAMPIONATI[i_reset] := 0;
+    END_FOR
+    START_PARZIALE := FALSE;
+    RESET_CAMPIONATI := FALSE;
+END_IF
+IF CANCELLA_INFO THEN
+    INDICE_MSG_INF := 0;
+    MEMSET(ADR(INFO_MSG), 0, SIZEOF(INFO_MSG));
+    CANCELLA_INFO := FALSE;
+END_IF
+
+(* ================================================================
+   Disabilita codici materiali oltre NUM_CODICI
+   ================================================================ *)
+FOR indice_cod:=NUM_CODICI+1 TO SIZEOF(CODICI_MATERIALI)-1 DO
+    MATERIALI_ATTIVI[indice_cod] := FALSE;
+END_FOR
+
+(* ================================================================
+   Diagnostica task
+   ================================================================ *)
+IF SystemTaskInfoArr[3].lastExecTime > max_time_task THEN
+    max_time_task := SystemTaskInfoArr[3].lastExecTime;
+END_IF
+IF SystemTaskInfoArr[3].cycleTimeExceeded THEN
+    count_exceed := count_exceed + 1;
+END_IF
+END_PROGRAM

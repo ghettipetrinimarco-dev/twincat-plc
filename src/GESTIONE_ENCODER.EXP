@@ -1,0 +1,130 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* @SYMFILEFLAGS := '2048' *)
+PROGRAM Gestione_Encoder
+VAR
+	Fronte_stato:R_TRIG;
+	partial:UDINT:=0;
+	indietro: BOOL;
+	SPEED_calc:REAL;
+	indice_enc:INT;
+	indice_out: INT;
+	aux_time:UDINT;
+	Ritardo:TON;
+	Counter AT %I*:UDINT;
+	Counter_aux:UDINT;
+	Encoder_STATE AT %I*:UINT;
+	Period AT %I*:UDINT;
+	max_time_task: UDINT;
+	count_exceed:UDINT;
+	All_encoder: BOOL;
+	trovato_ind_nir: BOOL;
+	indice_nir:INT;
+	max_impulsi:UDINT;
+	test: BOOL;
+	incremento: UDINT;
+	old_counter:UDINT;
+	Fronte_ok: R_TRIG;
+	i: INT;
+	indice_calc: UINT;
+	indice_calc_2: UINT;
+	indice_calc_3: UINT;
+	indice_calc_4: UINT;
+END_VAR
+(* @END_DECLARATION := '0' *)
+IF NOT ENABLE THEN
+IF NOT Trig_option THEN
+	Counter_aux:=Counter;
+ELSE
+	aux_time:=aux_time+1;
+	IF aux_time>=2 THEN
+		aux_time:=0;
+		Counter_aux:=Counter_aux+1;
+	END_IF;
+END_IF;
+IF partial > Counter_aux AND SPEED>0.1 AND Counter_aux <> 0 THEN incremento:=incremento+1; END_IF
+IF (speed<0.1 OR (NOT NIR_ATTIVO OR  test)) AND NOT Trig_option THEN
+	partial:=counter_aux;
+END_IF
+IF (Counter_aux >partial  OR  partial>(Counter_aux+MAX_Counter/2)) AND NIR_ATTIVO AND (ENCODER_OK OR test OR Trig_option) THEN
+	IF partial>(Counter_aux+MAX_Counter/2) THEN PASSO_ENCODER:=(MAX_Counter-partial)+Counter_aux+1; ELSE PASSO_ENCODER:=Counter_aux-partial; END_IF
+	IF PASSO_ENCODER>1 THEN max_impulsi:=max_impulsi+1; END_IF
+	partial:=Counter_aux;
+	trovato_ind_nir:=FALSE;
+	FOR indice_enc:=0 TO BUFFER_SIZE DO
+		IF NOT PROCESSING_DATA THEN
+			IF NOT MSI_data[indice_enc].esplus_effettuata AND NIR_ATTIVO AND MSI_data[indice_enc].Position <= Distanza_EV THEN MSI_data[indice_enc].Position:=MSI_data[indice_enc].Position + PASSO_ENCODER; END_IF
+			IF NOT trovato_ind_nir AND NIR_ATTIVO AND MSI_data[indice_enc].Position = Distanza_EV AND NOT MSI_data[indice_enc].esplus_effettuata THEN
+				trovato_ind_nir:=TRUE;
+				indice_nir:=indice_enc;
+			END_IF
+		ELSE
+		IF NOT MSI_elab[indice_enc].esplus_effettuata AND NIR_ATTIVO AND MSI_elab[indice_enc].Position <= Distanza_EV THEN MSI_elab[indice_enc].Position:=MSI_elab[indice_enc].Position + PASSO_ENCODER;END_IF
+			IF NOT trovato_ind_nir AND NIR_ATTIVO AND MSI_elab[indice_enc].Position = Distanza_EV AND NOT MSI_elab[indice_enc].esplus_effettuata THEN
+				trovato_ind_nir:=TRUE;
+				indice_nir:=indice_enc;
+			END_IF
+		END_IF
+	END_FOR
+	IF trovato_ind_nir THEN
+		FOR indice_out:=1 TO NUM_TRACKS_NIR DO
+			IF TEMPO_VARIABILE THEN Output_NIR[indice_out]:=FALSE; END_IF
+			IF NOT PROCESSING_DATA THEN
+				IF MSI_data[indice_nir].track_mat_select[indice_out] THEN
+					NUM_SELEZIONATI[MSI_data[indice_nir].indice_codice_mat[indice_out]]:=NUM_SELEZIONATI[MSI_data[indice_nir].indice_codice_mat[indice_out]]+1;
+					Output_NIR[indice_out]:=TRUE;
+				END_IF
+			ELSE
+				IF indice_nir>0 THEN indice_calc:=indice_nir-1; ELSE indice_calc:=BUFFER_SIZE; END_IF
+				IF indice_nir>1 THEN indice_calc_2:=indice_nir-2; ELSE indice_calc_2:=BUFFER_SIZE-1; END_IF
+				IF indice_nir>2 THEN indice_calc_3:=indice_nir-3; ELSE indice_calc_3:=BUFFER_SIZE-2; END_IF
+				IF indice_nir>3 THEN indice_calc_4:=indice_nir-4; ELSE indice_calc_4:=BUFFER_SIZE-3; END_IF
+				CASE step OF
+					91:
+					IF MSI_elab[indice_calc].track[indice_out]<>SFONDO THEN
+						MSI_elab[indice_nir].track_mat_select[indice_out]:=FALSE;
+					END_IF
+					92:
+					IF MSI_elab[indice_calc].track[indice_out]<>SFONDO AND MSI_elab[indice_calc_2].track[indice_out]<>SFONDO THEN
+						MSI_elab[indice_nir].track_mat_select[indice_out]:=FALSE;
+					END_IF
+					93:
+					IF MSI_elab[indice_calc].track[indice_out]<>SFONDO AND MSI_elab[indice_calc_2].track[indice_out]<>SFONDO AND MSI_elab[indice_calc_3].track[indice_out]<>SFONDO THEN
+						MSI_elab[indice_nir].track_mat_select[indice_out]:=FALSE;
+					END_IF
+					94:
+					IF MSI_elab[indice_calc].track[indice_out]<>SFONDO AND MSI_elab[indice_calc_2].track[indice_out]<>SFONDO AND MSI_elab[indice_calc_3].track[indice_out]<>SFONDO AND MSI_elab[indice_calc_4].track[indice_out]<>SFONDO  THEN
+						MSI_elab[indice_nir].track_mat_select[indice_out]:=FALSE;
+					END_IF
+				END_CASE
+				IF MSI_elab[indice_nir].track_mat_select[indice_out] THEN
+					NUM_SELEZIONATI[MSI_data[indice_nir].indice_codice_mat[indice_out]]:=NUM_SELEZIONATI[MSI_data[indice_nir].indice_codice_mat[indice_out]]+1;
+					Output_NIR[indice_out]:=TRUE;
+				END_IF
+			END_IF
+		END_FOR
+		MSI_data[indice_nir].esplus_effettuata:=TRUE;
+		MSI_elab[indice_nir].esplus_effettuata:=TRUE;
+	END_IF
+END_IF
+(*Calcolo della velocit  ------------------------------------------------------------------------------------------*)
+IF Period>0 THEN SPEED_calc:=(SVILUPPO_ESTERNO/IMPULSI_ENCODER*10000)/Period; END_IF
+IF SPEED_calc<0.1 THEN SPEED:=0; ELSE SPEED:=SPEED_calc; END_IF
+END_IF
+(*Diagnostica Encoder ------------------------------------------------------------------------------------------*)
+IF old_Counter>Counter OR SPEED=0 THEN
+	IF old_Counter>Counter AND ABS(old_Counter - Counter)<MAX_Counter/2 THEN indietro:=TRUE; ELSE indietro:=FALSE; END_IF
+	old_Counter:=Counter;
+END_IF
+IF Encoder_STATE = 8 AND NOT indietro THEN ENCODER_OK:=TRUE; ELSE ENCODER_OK:=FALSE; END_IF
+Ritardo(IN:=(Encoder_STATE <> 8) , PT:=T#3s , Q=> , ET=> );
+Fronte_stato(CLK:=Ritardo.Q , Q=> );
+Fronte_ok(CLK:=(Encoder_STATE=8), Q=>);
+IF Fronte_stato.Q THEN All_encoder:=TRUE; END_IF
+IF cancella_encoder OR Fronte_ok.Q THEN All_encoder:=FALSE; cancella_encoder:=FALSE; END_IF
+(*Calcolo tempo ciclo massimo della task*)
+IF SystemTaskInfoArr[1].lastExecTime>max_time_task THEN max_time_task:=SystemTaskInfoArr[1].lastExecTime; END_IF
+(*Calcolo Counter_aux exceed*)
+IF SystemTaskInfoArr[1].cycleTimeExceeded THEN count_exceed:=count_exceed+1;END_IF
+END_PROGRAM

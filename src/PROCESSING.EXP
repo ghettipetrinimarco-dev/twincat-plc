@@ -1,0 +1,310 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* @SYMFILEFLAGS := '2048' *)
+PROGRAM Processing
+VAR
+	rit_linee_nir:TON;
+	max_time_task: UDINT;
+	count_exceed: UDINT;
+	fb_data_ora:NT_GetTime;
+	start: BOOL;
+	fronte_timer: R_TRIG;
+	tempo_off: TON;
+	in_timer: BOOL:=TRUE;
+	tempo_on: TON;
+	usage:TC_CpuUsage;
+	fronte_timer_kg: R_TRIG;
+	tempo_off_kg: TON;
+	in_timer_kg: BOOL:=TRUE;
+	tempo_on_kg: TON;
+	kg_partial_min: REAL;
+	parziale: UDINT;
+	inc_sec: UINT;
+	totale_obj: UDINT;
+	indice_obj: UINT;
+	aux_1: BOOL;
+	aux_2: BOOL;
+	aux_data:DT;
+	aux_3: BOOL;
+	aux_4: BOOL;
+	aux_5: BOOL;
+	aux_6: BOOL;
+	count_time_partial:UDINT;
+	i: INT;
+	Totale_perc_campionato: UDINT;
+	Totale_perc_campionato_parziale: UDINT;
+	Totale_perc_selezionato: UDINT;
+	fronte_start:R_TRIG;
+	fronte_stop:F_TRIG;
+	indice_cod: INT;
+	i_reset: INT;
+	(* --- MODBUS TCP SERVER (MAPPATURA 4.0 DIRETTA) --- *)
+
+	Modbus_Area AT %MW0 : ARRAY [0..51] OF WORD;
+
+	Modbus_Comando_Old : WORD;
+	 (* Cuscinetto per rilevare il comando di scrittura *)
+
+	idx_mb: INT;
+END_VAR
+(* @END_DECLARATION := '0' *)
+Machine_name:='NIR_1500.117';
+IF fronte_timer.Q THEN inc_sec:=inc_sec+1; END_IF
+IF inc_sec>=3 THEN speed_old:=SPEED; inc_sec:=0; END_IF
+speed_delay(IN:=(SPEED>0.1 AND ABS(SPEED-speed_old) <0.3) , PT:=T#3s , Q=> , ET=> );
+rit_linee_nir(IN:=(Linee>100) , PT:=T#3s , Q=> , ET=> );
+(*Calcolo percentuali materiali campionati*)
+Totale_perc_campionato:=0;
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+	Totale_perc_campionato:=Totale_perc_campionato+NUM_CAMPIONATI[i];
+END_FOR
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+	IF Totale_perc_campionato>0 THEN
+		PERC_CAMPIONATI[i]:=UDINT_TO_REAL(NUM_CAMPIONATI[i])*100/Totale_perc_campionato;
+	ELSE
+		PERC_CAMPIONATI[i]:=0;
+	END_IF
+END_FOR
+(*Numero campionati parziale*)
+fronte_start(CLK:=START_PARZIALE , Q=> );
+IF fronte_start.Q THEN
+	Info_Msg[indice_msg_inf]:=5;
+	indice_msg_inf:=indice_msg_inf+1;
+	IF indice_msg_inf >= MAX_INF THEN indice_msg_inf:=0; END_IF
+	FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+		NUM_CAMPIONATI_PARZIALI_tmp[i]:=NUM_CAMPIONATI[i];
+	END_FOR
+END_IF
+fronte_stop(CLK:=START_PARZIALE , Q=> );
+IF fronte_stop.Q THEN
+	Info_Msg[indice_msg_inf]:=6;
+	indice_msg_inf:=indice_msg_inf+1;
+	IF indice_msg_inf >= MAX_INF >= MAX_INF THEN indice_msg_inf:=0; END_IF
+END_IF
+(*Calcolo percentuali materiali campionati parziali*)
+Totale_perc_campionato_parziale:=0;
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+	IF START_PARZIALE THEN
+		IF NUM_CAMPIONATI[i]>=NUM_CAMPIONATI_PARZIALI_tmp[i] THEN
+			NUM_CAMPIONATI_PARZIALI[i]:=NUM_CAMPIONATI[i]-NUM_CAMPIONATI_PARZIALI_tmp[i];
+		ELSE
+			NUM_CAMPIONATI_PARZIALI[i]:=NUM_CAMPIONATI_PARZIALI_tmp[i]-NUM_CAMPIONATI[i];
+		END_IF
+	END_IF
+	Totale_perc_campionato_parziale:=Totale_perc_campionato_parziale+NUM_CAMPIONATI_PARZIALI[i];
+END_FOR
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+	IF Totale_perc_campionato_parziale>0 THEN
+		PERC_CAMPIONATI_PARZIALI[i]:=UDINT_TO_REAL(NUM_CAMPIONATI_PARZIALI[i])*100/Totale_perc_campionato_parziale;
+	ELSE
+		PERC_CAMPIONATI_PARZIALI[i]:=0;
+	END_IF
+END_FOR
+
+(*Calcolo percentuali materiali selezionati*)
+Totale_perc_selezionato:=0;
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+	Totale_perc_selezionato:=Totale_perc_selezionato+NUM_SELEZIONATI[i];
+END_FOR
+FOR i:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+	IF Totale_perc_selezionato>0 THEN
+		PERC_SELEZIONATI[i]:=UDINT_TO_REAL(NUM_SELEZIONATI[i])*100/Totale_perc_selezionato;
+	ELSE
+		PERC_SELEZIONATI[i]:=0;
+	END_IF
+END_FOR
+
+(*Calcolo peso totale materiale selezionato barriera 1*)
+IF (NIR_ATTIVO AND parziale>Totale_perc_selezionato) OR SPEED<0.5 THEN parziale:=Totale_perc_selezionato; END_IF
+IF SPEED > 0.5 AND PESO_MATERIALE>0 AND Linee>0 AND Totale_perc_selezionato>parziale AND NIR_ATTIVO THEN
+	PESO_TOTALE:=PESO_TOTALE+((Totale_perc_selezionato-parziale)*((UDINT_TO_REAL(PESO_MATERIALE)/90000)*(6*SPEED*1000/Linee))/1000); parziale:=Totale_perc_selezionato;
+END_IF
+
+IF Reset_Peso THEN
+	PESO_TOTALE:=0;
+	Reset_peso:=FALSE;
+	kg_partial_min:=0;
+END_IF
+tempo_on_kg(IN:=in_timer_kg , PT:=T#60S , Q=> , ET=> );
+IF tempo_on_kg.Q THEN in_timer_kg:=FALSE; END_IF
+tempo_off_kg(IN:=NOT(in_timer_kg) , PT:=T#1MS , Q=> , ET=> );
+IF tempo_off_kg.Q THEN in_timer_kg:=TRUE; END_IF
+fronte_timer_kg(CLK:=in_timer_kg , Q=> );
+IF fronte_timer_kg.Q THEN
+	count_time_partial:=count_time_partial+1;
+	tempo_ora:=tempo_ora+1;
+	IF tempo_ora > 59 THEN tempo_ora:=0;intervallo_ore_istantaneo:=intervallo_ore_istantaneo+1; END_IF
+	IF speed >0 THEN
+		KG_MINUTI:=PESO_TOTALE-kg_partial_min;
+		kg_partial_min:=PESO_TOTALE;
+	ELSE
+		KG_MINUTI:=0;
+		kg_partial_min:=PESO_TOTALE;
+	END_IF
+END_IF
+IF fronte_timer_kg.Q THEN
+	IF n_volte_min>0 AND Perc_carico_parz_min>0 AND Fattore_carico>0 AND speed>0 THEN
+		carico_min:=Fattore_carico*100*Perc_carico_parz_min/n_volte_min/NUM_TRACKS_NIR;
+		IF carico_min>100 THEN carico_min:=100; END_IF
+	ELSE
+ 		carico_min:=0;
+	END_IF
+	Perc_carico_parz_min:=0;
+	n_volte_min:=0;
+END_IF
+tempo_on(IN:=in_timer , PT:=T#1S , Q=> , ET=> );
+IF tempo_on.Q THEN in_timer:=FALSE; END_IF
+tempo_off(IN:=NOT(in_timer) , PT:=T#1MS , Q=> , ET=> );
+IF tempo_off.Q THEN in_timer:=TRUE; END_IF
+fronte_timer(CLK:=in_timer , Q=> );
+IF fronte_timer.Q THEN start:=TRUE; END_IF
+fb_data_ora(
+	NETID:= '',
+	START:= start,
+	TMOUT:= DEFAULT_ADS_TIMEOUT,
+	BUSY=> ,
+	ERR=> ,
+	ERRID=> ,
+	TIMESTR=>data_ora );
+start:=FALSE;
+
+IF cancella_info THEN
+	indice_msg_inf:=0;
+	MEMSET(ADR(info_Msg),0, SIZEOF(info_Msg));
+	cancella_info:=FALSE;
+END_IF
+
+usage(
+	NETID:= '',
+	START:=TRUE,
+	TMOUT:=DEFAULT_ADS_TIMEOUT ,
+	BUSY=> ,
+	ERR=> ,
+	ERRID=> ,
+	USAGE=>CPU_USAGE );
+usage(START:=FALSE,);
+(*Calcolo delle distanze di sparo*)
+Distanza_EV:=DISTANZA;
+(*Carico traccie*)
+IF count_time_partial >= count_time THEN
+	totale_obj:=0;
+	FOR indice_obj:=1 TO NUM_TRACKS_NIR DO
+		totale_obj:=totale_obj+num_obj[indice_obj];
+	END_FOR
+	FOR indice_obj:=1 TO NUM_TRACKS_NIR DO
+		IF totale_obj>0 THEN ISTO_EV[indice_obj]:=UDINT_TO_REAL(num_obj[indice_obj])*100/totale_obj; ELSE ISTO_EV[indice_obj]:=0;END_IF
+	END_FOR
+	count_time_partial:=0;
+	MEMSET(ADR(num_obj),0,SIZEOF(num_obj));
+END_IF
+(*Scadenze*)
+aux_data:=SYSTEMTIME_TO_DT(data_ora);
+IF data1_scadenza<aux_data  THEN	aux_1:=TRUE;END_IF
+IF data2_scadenza< aux_data THEN	aux_2:=TRUE;END_IF
+IF data3_scadenza< aux_data THEN	aux_3:=TRUE;END_IF
+IF data4_scadenza< aux_data THEN	aux_4:=TRUE;END_IF
+IF data5_scadenza< aux_data THEN	aux_5:=TRUE;END_IF
+IF data6_scadenza< aux_data THEN	aux_6:=TRUE;END_IF
+(*Scadenza 1*)
+IF (intervallo_ore_istantaneo>=intervallo_ore_1 OR aux_1) AND num_pw=0 THEN
+	ENABLE:=TRUE;
+	intervallo_ore_istantaneo:=0;
+	tempo_ora:=0;
+END_IF
+(*Scadenza 2*)
+IF (intervallo_ore_istantaneo>=intervallo_ore_2 OR aux_2) AND num_pw=1 THEN
+	ENABLE:=TRUE;
+	intervallo_ore_istantaneo:=0;
+	tempo_ora:=0;
+END_IF
+(*Scadenza 3*)
+IF (intervallo_ore_istantaneo>=intervallo_ore_3 OR aux_3) AND num_pw=2 THEN
+	ENABLE:=TRUE;
+	intervallo_ore_istantaneo:=0;
+	tempo_ora:=0;
+END_IF
+(*Scadenza 4*)
+IF (intervallo_ore_istantaneo>=intervallo_ore_4 OR aux_4) AND num_pw=3 THEN
+	ENABLE:=TRUE;
+	intervallo_ore_istantaneo:=0;
+	tempo_ora:=0;
+END_IF
+(*Scadenza 5*)
+IF (intervallo_ore_istantaneo>=intervallo_ore_5 OR aux_5) AND num_pw=4 THEN
+	ENABLE:=TRUE;
+	intervallo_ore_istantaneo:=0;
+	tempo_ora:=0;
+END_IF
+(*Scadenza 6*)
+IF (intervallo_ore_istantaneo>=intervallo_ore_6 OR aux_6) AND num_pw=5 THEN
+	ENABLE:=TRUE;
+	intervallo_ore_istantaneo:=0;
+	tempo_ora:=0;
+END_IF
+IF pulisci THEN
+	pulisci:=FALSE;
+	MEMSET(ADR(matrix_data),0,SIZEOF(matrix_data));
+	MEMSET(ADR(matrix_elab),0,SIZEOF(matrix_elab));
+	MEMSET(ADR(matrix_data_bool),0,SIZEOF(matrix_data_bool));
+	MEMSET(ADR(matrix_elab_bool),0,SIZEOF(matrix_elab_bool));
+	MEMSET(ADR(matrix_data_bool_inq),0,SIZEOF(matrix_data_bool_inq));
+	MEMSET(ADR(matrix_elab_perc),0,SIZEOF(matrix_elab_perc));
+END_IF
+(*Disabilitazione codici attivi*)
+FOR indice_cod:=NUM_CODICI+1 TO SIZEOF(CODICI_MATERIALI)-1 DO
+	MATERIALI_ATTIVI[indice_cod]:=FALSE;
+END_FOR
+IF RESET_SELEZIONATI THEN
+	FOR i_reset:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+		NUM_SELEZIONATI[i_reset]:=0;
+	END_FOR
+	RESET_SELEZIONATI:=FALSE;
+END_IF
+IF RESET_CAMPIONATI THEN
+	FOR i_reset:=0 TO SIZEOF(CODICI_MATERIALI)-1 DO
+		NUM_CAMPIONATI[i_reset]:=0;
+	END_FOR
+	START_PARZIALE:=FALSE;
+	RESET_CAMPIONATI:=FALSE;
+END_IF
+(*Calcolo tempo ciclo massimo della task*)
+IF SystemTaskInfoArr[3].lastExecTime>max_time_task THEN max_time_task:=SystemTaskInfoArr[4].lastExecTime; END_IF
+(*Calcolo counter exceed*)
+IF SystemTaskInfoArr[3].cycleTimeExceeded THEN count_exceed:=count_exceed+1;END_IF
+(* ==================================================== *)
+(* --- MODBUS TCP SERVER: MAPPA 4.0 LOGICA DIRETTA  --- *)
+(* ==================================================== *)
+
+(* --- FASE 1: LETTURA E POPOLAMENTO DATI --- *)
+Modbus_Area[0] := REAL_TO_WORD(carico_min * 10.0);
+Modbus_Area[2] := REAL_TO_WORD(Pressione_aria * 10.0);
+Modbus_Area[3] := REAL_TO_WORD(Flussostato_aria * 10.0);
+Modbus_Area[4] := UDINT_TO_WORD(intervallo_ore_istantaneo);
+
+(* Mappatura degli array Percentuali (da indice 0 a 15) *)
+FOR idx_mb := 0 TO 15 DO
+	(* Offset 6 corrisponde a 12294, Offset 22 corrisponde a 12310 *)
+	Modbus_Area[6 + idx_mb]  := REAL_TO_WORD(PERC_SELEZIONATI[idx_mb] * 10.0);
+	Modbus_Area[22 + idx_mb] := REAL_TO_WORD(PERC_CAMPIONATI[idx_mb] * 10.0);
+END_FOR
+
+(* Stato Macchina *)
+IF DIAGNOSTICA_OK THEN Modbus_Area[38] := 1; ELSE Modbus_Area[38] := 0; END_IF;
+IF ENABLE THEN Modbus_Area[39] := 1; ELSE Modbus_Area[39] := 0; END_IF;
+
+Modbus_Area[40] := REAL_TO_WORD(KG_MINUTI * 10.0);
+Modbus_Area[41] := REAL_TO_WORD(PESO_TOTALE * 10.0);
+Modbus_Area[42] := BYTE_TO_WORD(NUM_LOAD_ID);
+
+
+(* --- FASE 2: SCRITTURA E CAMBIO RICETTA (Logica Davide) --- *)
+IF Modbus_Comando_Old <> Modbus_Area[51] THEN
+	IF Modbus_Area[51] > 0 AND Modbus_Area[51] <= 255 THEN
+		NUM_LOAD_ID := WORD_TO_BYTE(Modbus_Area[51]);
+		CMD_LOAD := TRUE;
+		Modbus_Area[51] := 0;
+	END_IF
+END_IF
+Modbus_Comando_Old := Modbus_Area[51];
+END_PROGRAM

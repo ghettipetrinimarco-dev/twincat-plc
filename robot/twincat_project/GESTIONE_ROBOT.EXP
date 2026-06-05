@@ -1,0 +1,297 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* @SYMFILEFLAGS := '2048' *)
+(*
+    PROGRAM Gestione_Robot  — v2.1
+    ================================
+    Legge OBJ_queue[] (prodotta da FB_Segmentazione via Sensore_NIR),
+    costruisce una stringa di pick per ogni oggetto e la invia via TCP
+    direttamente al controller robot.
+
+    NON usa PickMaster. Connessione singola TCP a IP_ROBOT:PORT_ROBOT.
+
+    Formato stringa inviata:
+        @UiTag,X_mm,Y_mm,Z_mm,Rotazione,AttesaPresa,X_box,Y_box,Z_box,AttesaDeposito,#
+    Esempio:
+        @42,287.5,1834.6,200.0,0.0,0.5,320.0,340.0,50.0,0.3,#
+
+    ACK dal robot (dopo pick completato):
+        OK,42,#
+    Se il robot non risponde entro ACK_TIMEOUT, il pick è comunque
+    confermato (produzione non bloccata) e l'errore viene conteggiato.
+
+    Macchina a stati:
+        0  CONNESSIONE       — apre socket TCP verso robot
+        1  RUNNING           — attende oggetti in OBJ_queue
+        2  INVIA             — costruisce stringa e la spedisce
+        3  CHIUDI_RICONNETTI — errore: chiude socket, aspetta, riprova
+        4  ATTESA_ACK        — attende conferma dal robot (non bloccante)
+       99  IDLE              — disabilitato (ABIL_ROBOT = FALSE)
+*)
+PROGRAM Gestione_Robot
+VAR CONSTANT
+    CONNESSIONE         : INT := 0;
+    RUNNING             : INT := 1;
+    INVIA               : INT := 2;
+    CHIUDI_RICONNETTI   : INT := 3;
+    ATTESA_ACK          : INT := 4;
+    ROBOT_TIMEOUT       : TIME := T#5S;
+    RITARDO_RICONNESSIONE : TIME := T#3S;
+    ACK_TIMEOUT         : TIME := T#3S;  (* timeout attesa ACK — non bloccante *)
+    ACK_BUF_SIZE        : UDINT := 32;   (* byte buffer ricezione ACK *)
+END_VAR
+VAR
+    (* Socket TCP verso robot *)
+    FB_Connetti         : FB_SocketConnect;
+    hSocket             : T_HSOCKET;
+    FB_Spedisci         : FB_SocketSend;
+    FB_Chiudi           : FB_SocketClose;
+    FB_Ricevi           : FB_SocketReceive;
+
+    Stato               : INT := 99;
+    fronte_abil         : R_TRIG;
+    fronte_disabil      : F_TRIG;
+    ritardo_riconn      : TON;
+    timer_ack           : TON;           (* timeout attesa ACK *)
+
+    (* Oggetto corrente da inviare *)
+    obj_corrente        : OBJ_PICK;
+    String_Pick         : STRING(255);   (* stringa formattata per il robot *)
+    len_stringa         : UDINT;
+    Y_mm                : REAL;          (* posizione Y convertita in mm *)
+
+    (* Buffer ricezione ACK *)
+    ack_buffer          : ARRAY[0..31] OF BYTE;
+    ack_ricevuto        : UDINT;         (* byte effettivamente ricevuti *)
+    ack_str             : STRING(31);
+
+    (* Diagnostica *)
+    n_pick_inviati      : UDINT;         (* totale pick inviati con successo *)
+    n_errori_tcp        : UDINT;         (* totale errori di connessione/invio *)
+    n_ack_timeout       : UDINT;         (* pick senza ACK entro timeout *)
+    ultimo_errore_id    : UDINT;         (* nErrId dell'ultimo errore *)
+    max_time_task       : UDINT;
+    count_exceed        : UDINT;
+END_VAR
+(* @END_DECLARATION := '0' *)
+
+
+(* --- Abilitazione / disabilitazione --- *)
+fronte_abil(CLK:=ABIL_ROBOT , Q=> );
+fronte_disabil(CLK:=ABIL_ROBOT , Q=> );
+IF fronte_abil.Q AND Stato = 99 THEN Stato := CONNESSIONE; END_IF
+IF fronte_disabil.Q AND Stato <> 99 THEN Stato := CHIUDI_RICONNETTI; END_IF
+
+CASE Stato OF
+
+(* ================================================================
+   0 — CONNESSIONE: apre socket TCP verso controller robot
+   ================================================================ *)
+0:
+FB_Connetti(
+    sSrvNetId   := '',
+    sRemoteHost := IP_ROBOT,
+    nRemotePort := PORT_ROBOT,
+    bExecute    := TRUE,
+    tTimeout    := ROBOT_TIMEOUT,
+    bBusy       => ,
+    bError      => ,
+    nErrId      => ,
+    hSocket     => hSocket);
+FB_Connetti(bExecute:= FALSE);
+IF NOT FB_Connetti.bBusy THEN
+    IF NOT FB_Connetti.bError AND hSocket.handle <> 0 THEN
+        ROBOT_CONNESSO := TRUE;
+        Stato := RUNNING;
+    ELSE
+        ROBOT_CONNESSO := FALSE;
+        ultimo_errore_id := FB_Connetti.nErrId;
+        n_errori_tcp := n_errori_tcp + 1;
+        Stato := CHIUDI_RICONNETTI;
+    END_IF
+END_IF
+
+(* ================================================================
+   1 — RUNNING: controlla OBJ_queue, se c'è un oggetto → INVIA
+   ================================================================ *)
+1:
+IF obj_tail <> obj_head THEN
+    (* Leggi prossimo oggetto dalla coda circolare *)
+    IF OBJ_queue[obj_tail].valido AND NOT OBJ_queue[obj_tail].inviato THEN
+        obj_corrente := OBJ_queue[obj_tail];
+        Stato := INVIA;
+    ELSE
+        (* Slot non valido o già inviato — avanza comunque *)
+        obj_tail := obj_tail + 1;
+        IF obj_tail > MAX_OBJ_QUEUE THEN obj_tail := 0; END_IF
+    END_IF
+END_IF
+
+(* ================================================================
+   2 — INVIA: costruisce stringa pick e la spedisce via TCP
+   ================================================================ *)
+2:
+(*
+   Converti posizione encoder → mm fisici con compensazione conveyor.
+
+   Y_rilevato   = posizione Y quando il NIR ha visto l'oggetto (in mm)
+   Y_pick       = Y_rilevato + DISTANZA_ROBOT_MM
+                            + compensazione avanzamento nastro durante ciclo robot
+
+   Compensazione avanzamento:
+     Il nastro si muove di (SPEED × TEMPO_CICLO_ROBOT × 1000) mm
+     mentre il robot esegue il ciclo precedente.
+     Questa è una stima semplice — per precisione assoluta serve
+     conveyor tracking RobotWare con encoder sul nastro.
+
+   TEMPO_CICLO_ROBOT: calibrare misurando il tempo reale pick→pick.
+   Default 1.0s — verificare sul prototipo.
+*)
+Y_mm := UDINT_TO_REAL(obj_corrente.Y)
+        / UDINT_TO_REAL(IMPULSI_ENCODER)
+        * SVILUPPO_ESTERNO
+        + DISTANZA_ROBOT_MM
+        + (SPEED * TEMPO_CICLO_ROBOT * 1000.0);  (* compensazione conveyor *)
+
+(* Bounds check indice_box — FB_Segmentazione lo valida già, doppia protezione *)
+IF obj_corrente.indice_box < 0 OR obj_corrente.indice_box >= N_BOX THEN
+    obj_corrente.indice_box := 0;
+END_IF
+
+(* Costruisci stringa:  @UiTag,X,Y,Z,Rot,AttPresa,Xbox,Ybox,Zbox,AttDeposito,# *)
+String_Pick := CONCAT('@'          , INT_TO_STRING(UiTag_robot));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(obj_corrente.X)));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(Y_mm)));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(ALTEZZA)));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(GRADI_ROTAZIONE)));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(ATTESA_PRESA)));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(X_BOX[obj_corrente.indice_box])));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(Y_BOX[obj_corrente.indice_box])));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(Z_BOX[obj_corrente.indice_box])));
+String_Pick := CONCAT(String_Pick  , CONCAT(',', REAL_TO_STRING(ATTESA_DEPOSITO)));
+String_Pick := CONCAT(String_Pick  , ',#');
+
+len_stringa := INT_TO_UDINT(LEN(String_Pick));
+
+FB_Spedisci(
+    sSrvNetId   := '',
+    hSocket     := hSocket,
+    cbLen       := len_stringa,
+    pSrc        := ADR(String_Pick),
+    bExecute    := TRUE,
+    tTimeout    := ROBOT_TIMEOUT,
+    bBusy       => ,
+    bError      => ,
+    nErrId      => );
+FB_Spedisci(bExecute:= FALSE);
+
+IF NOT FB_Spedisci.bBusy THEN
+    IF NOT FB_Spedisci.bError THEN
+        (* Invio OK — avanza coda e aspetta ACK *)
+        n_pick_inviati := n_pick_inviati + 1;
+        OBJ_queue[obj_tail].inviato := TRUE;
+
+        (* Aggiorna contatore selezionati per questo materiale *)
+        IF obj_corrente.materiale >= 0 AND obj_corrente.materiale <= 100 THEN
+            NUM_SELEZIONATI[obj_corrente.materiale] :=
+                NUM_SELEZIONATI[obj_corrente.materiale] + 1;
+        END_IF
+
+        (* Avanza tail e UiTag — gestione wrap INT (max 32767) *)
+        obj_tail := obj_tail + 1;
+        IF obj_tail > MAX_OBJ_QUEUE THEN obj_tail := 0; END_IF
+        UiTag_robot := UiTag_robot + 1;
+        IF UiTag_robot >= 30000 THEN UiTag_robot := 0; END_IF  (* reset prima dell'overflow *)
+
+        MEMSET(ADR(ack_buffer), 0, SIZEOF(ack_buffer));
+        timer_ack(IN:=FALSE);  (* reset timer *)
+        Stato := ATTESA_ACK;
+    ELSE
+        (* Errore invio → riconnetti *)
+        ultimo_errore_id := FB_Spedisci.nErrId;
+        n_errori_tcp := n_errori_tcp + 1;
+        Stato := CHIUDI_RICONNETTI;
+    END_IF
+END_IF
+
+(* ================================================================
+   4 — ATTESA_ACK: riceve conferma dal robot (non bloccante)
+   Il robot invia "OK,UiTag,#" dopo aver completato il pick.
+   Se il timeout scade → pick comunque confermato, torna RUNNING.
+   ================================================================ *)
+4:
+timer_ack(IN:=TRUE, PT:=ACK_TIMEOUT);
+
+FB_Ricevi(
+    sSrvNetId   := '',
+    hSocket     := hSocket,
+    cbLen       := ACK_BUF_SIZE,
+    pDest       := ADR(ack_buffer),
+    bExecute    := TRUE,
+    tTimeout    := ACK_TIMEOUT,
+    bBusy       => ,
+    bError      => ,
+    nErrId      => ,
+    nRecBytes   => ack_ricevuto);
+FB_Ricevi(bExecute:= FALSE);
+
+IF NOT FB_Ricevi.bBusy THEN
+    IF NOT FB_Ricevi.bError AND ack_ricevuto > 0 THEN
+        (* ACK ricevuto — torna a RUNNING *)
+        timer_ack(IN:=FALSE);
+        Stato := RUNNING;
+    ELSIF FB_Ricevi.bError OR timer_ack.Q THEN
+        (* ACK non ricevuto (timeout o errore ricezione).
+           Il pick è già confermato — produzione NON bloccata.
+           Nota: NON andare a CHIUDI_RICONNETTI qui: se il socket è davvero
+           rotto, lo rileva FB_Spedisci al prossimo pick (stato 2 → stato 3).
+           Andare a CHIUDI_RICONNETTI su ogni errore ACK causerebbe 3s di fermo
+           per ogni pick su robot che non invia ACK. *)
+        IF FB_Ricevi.bError THEN
+            ultimo_errore_id := FB_Ricevi.nErrId;
+        END_IF
+        n_ack_timeout := n_ack_timeout + 1;
+        timer_ack(IN:=FALSE);
+        Stato := RUNNING;
+    END_IF
+END_IF
+
+(* ================================================================
+   3 — CHIUDI_RICONNETTI: chiude socket, attende, torna a CONNESSIONE
+   ================================================================ *)
+3:
+FB_Chiudi(
+    sSrvNetId   := '',
+    hSocket     := hSocket,
+    bExecute    := TRUE,
+    tTimeout    := DEFAULT_ADS_TIMEOUT,
+    bBusy       => ,
+    bError      => ,
+    nErrId      => );
+IF NOT FB_Chiudi.bBusy THEN
+    FB_Chiudi(bExecute:= FALSE);
+    MEMSET(ADR(hSocket), 0, SIZEOF(hSocket));
+    ritardo_riconn(IN:=FALSE);   (* reset timer *)
+END_IF
+
+ROBOT_CONNESSO := FALSE;
+ritardo_riconn(IN:=(hSocket.handle = 0), PT:=RITARDO_RICONNESSIONE);
+IF ritardo_riconn.Q AND ABIL_ROBOT THEN
+    Stato := CONNESSIONE;
+END_IF
+IF NOT ABIL_ROBOT THEN Stato := 99; END_IF
+
+END_CASE
+
+(* Diagnostica task
+   NOTA: indice SystemTaskInfoArr dipende dall'ordine di creazione task nel System Manager.
+   Con architettura standard: [1]=Input_Output, [2]=Gestione_Robot, [3]=Elaboration.
+   Verificare e aggiustare l'indice sul progetto reale se necessario. *)
+IF SystemTaskInfoArr[2].lastExecTime > max_time_task THEN
+    max_time_task := SystemTaskInfoArr[2].lastExecTime;
+END_IF
+IF SystemTaskInfoArr[2].cycleTimeExceeded THEN
+    count_exceed := count_exceed + 1;
+END_IF
+END_PROGRAM

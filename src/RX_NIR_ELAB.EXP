@@ -1,0 +1,13 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+TYPE RX_NIR_ELAB :
+STRUCT
+	track:ARRAY[1..NUM_TRACKS_NIR] OF BYTE;
+	track_mat_select:ARRAY[1..NUM_TRACKS_NIR] OF BOOL; (*Se TRUE ho un materiale selezionato in tale traccia x*)
+	perc_inq:ARRAY[1..NUM_TRACKS_NIR] OF REAL;
+	Position:UDINT;
+	esplus_effettuata:BOOL;
+END_STRUCT
+END_TYPE
+(* @END_DECLARATION := '0' *)

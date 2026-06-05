@@ -1,0 +1,165 @@
+(*
+    PROGRAM SIM_Robot
+    =================
+    Simulatore oggetti per test Gestione_Robot senza NIR fisico.
+    Inietta oggetti fittizi in OBJ_queue[] a intervallo regolare.
+
+    USO:
+      Aggiungere al task Elaboration (10ms) SOLO durante i test.
+      Rimuovere (o disabilitare con SIM_ATTIVA=FALSE) in produzione.
+
+    Modalità di test supportate:
+      SIM_MODO = 0 → un oggetto ogni SIM_INTERVALLO_S secondi (materiale fisso)
+      SIM_MODO = 1 → round-robin su 4 materiali con box diversi
+      SIM_MODO = 2 → burst: 8 oggetti veloci poi pausa 5s (test coda piena)
+
+    Variabili da osservare durante il test:
+      ROBOT_CONNESSO       — socket TCP aperto verso il robot
+      UiTag_robot          — numero di pick inviati
+      n_pick_inviati       — (in Gestione_Robot, VAR locale)
+      CODA_UTILIZZO        — % coda occupata (max sotto stress)
+      ROBOT_CODA_PIENA     — deve restare FALSE in condizioni normali
+      EFFICIENZA_PICK      — deve avvicinarsi a 100% in simulazione
+*)
+PROGRAM SIM_Robot
+VAR
+    (* --- Controllo simulazione --- *)
+    SIM_ATTIVA          : BOOL := FALSE;  (* FALSE = simulatore disattivato *)
+    SIM_MODO            : INT  := 0;      (* 0=steady, 1=round-robin mat, 2=burst *)
+    SIM_INTERVALLO_S    : REAL := 2.0;    (* secondi tra un oggetto e il prossimo *)
+    SIM_X_BASE          : REAL := 58.5;  (* traccia NIR simulata (0..117) *)
+    SIM_Y_BASE          : UDINT := 1000; (* posizione encoder simulata *)
+    SIM_MAT_FISSO       : INT  := 0;     (* materiale per SIM_MODO=0 *)
+
+    (* --- Timer iniezione --- *)
+    timer_inj           : TON;
+    timer_inj_pt        : TIME;   (* PT calcolato da SIM_INTERVALLO_S — REAL_TO_TIME non esiste in TC2 *)
+    in_timer_inj        : BOOL := TRUE;
+
+    (* --- Stato burst --- *)
+    burst_count         : INT  := 0;
+    burst_pausa         : TON;
+    in_pausa            : BOOL := FALSE;
+
+    (* --- Round-robin --- *)
+    mat_corrente        : INT  := 0;
+    MATERIALI_SIM       : ARRAY[0..3] OF INT := (0, 1, 2, 3);  (* indici materiali — sintassi IEC 61131-3 *)
+
+    (* --- Oggetto simulato --- *)
+    obj_sim             : OBJ_PICK;
+    next_head_sim       : INT;
+    sim_y_counter       : UDINT := 0;  (* encoder fittizio che avanza *)
+END_VAR
+
+
+IF NOT SIM_ATTIVA THEN RETURN; END_IF
+
+(* ================================================================
+   Avanza encoder simulato (simula nastro che si muove)
+   ================================================================ *)
+sim_y_counter := sim_y_counter + 10;  (* 10 impulsi per ciclo task 10ms *)
+IF sim_y_counter > 4000000000 THEN sim_y_counter := 0; END_IF  (* wrap manuale *)
+
+(* ================================================================
+   MODO 2 — Burst: test saturazione coda
+   8 oggetti in rapida successione, poi pausa 5s
+   ================================================================ *)
+IF SIM_MODO = 2 THEN
+    IF NOT in_pausa THEN
+        IF burst_count < 8 THEN
+            (* Inietta direttamente senza timer *)
+            obj_sim.X          := SIM_X_BASE + INT_TO_REAL(burst_count) * 3.0;
+            obj_sim.Y          := sim_y_counter;
+            obj_sim.materiale  := 0;
+            obj_sim.indice_box := 0;
+            obj_sim.valido     := TRUE;
+            obj_sim.inviato    := FALSE;
+
+            next_head_sim := obj_head + 1;
+            IF next_head_sim > MAX_OBJ_QUEUE THEN next_head_sim := 0; END_IF
+            IF next_head_sim <> obj_tail THEN
+                OBJ_queue[obj_head] := obj_sim;
+                obj_head := next_head_sim;
+                (* Aggiorna NUM_CAMPIONATI per coerenza stats — il SIM bypassa FB_Segmentazione *)
+                NUM_CAMPIONATI[0] := NUM_CAMPIONATI[0] + 1;
+            END_IF
+            burst_count := burst_count + 1;
+        ELSE
+            (* 8 oggetti iniettati → entra in pausa *)
+            in_pausa := TRUE;
+            burst_pausa(IN:=FALSE);  (* reset timer al momento dell'entrata *)
+        END_IF
+    ELSE
+        (* In pausa — attende 5s poi riparte *)
+        burst_pausa(IN:=TRUE, PT:=T#5S, Q=>);
+        IF burst_pausa.Q THEN
+            burst_pausa(IN:=FALSE);
+            in_pausa := FALSE;
+            burst_count := 0;
+        END_IF
+    END_IF
+    RETURN;
+END_IF
+
+(* ================================================================
+   MODO 0 e 1 — Timer regolare
+   ================================================================ *)
+(* REAL_TO_TIME non esiste in TC2: TIME è DWORD interno (ms).
+   Conversione: REAL(secondi) × 1000 → DWORD(ms) → TIME *)
+timer_inj_pt := DWORD_TO_TIME(REAL_TO_DWORD(SIM_INTERVALLO_S * 1000.0));
+timer_inj(IN:=in_timer_inj, PT:=timer_inj_pt, Q=>);
+IF timer_inj.Q THEN
+    in_timer_inj := FALSE;
+END_IF
+
+(* reset timer a un tick *)
+IF NOT in_timer_inj THEN
+    timer_inj(IN:=FALSE, Q=>);
+    in_timer_inj := TRUE;
+
+    (* ---- Scegli materiale ---- *)
+    IF SIM_MODO = 1 THEN
+        (* Round-robin su 4 materiali *)
+        obj_sim.materiale  := MATERIALI_SIM[mat_corrente];
+        obj_sim.indice_box := mat_corrente;  (* ogni materiale va in box diverso *)
+        mat_corrente := mat_corrente + 1;
+        IF mat_corrente > 3 THEN mat_corrente := 0; END_IF
+    ELSE
+        (* Materiale fisso — bounds check su SIM_MAT_FISSO prima di accedere all'array *)
+        IF SIM_MAT_FISSO >= 0 AND SIM_MAT_FISSO <= 15 THEN
+            obj_sim.materiale  := SIM_MAT_FISSO;
+            obj_sim.indice_box := MATERIALI_ATTIVI_BOX[SIM_MAT_FISSO];
+        ELSE
+            obj_sim.materiale  := 0;
+            obj_sim.indice_box := 0;
+        END_IF
+        IF obj_sim.indice_box < 0 OR obj_sim.indice_box >= N_BOX THEN
+            obj_sim.indice_box := 0;
+        END_IF
+    END_IF
+
+    (* ---- Costruisci oggetto simulato ---- *)
+    obj_sim.X      := SIM_X_BASE;
+    obj_sim.Y      := sim_y_counter + SIM_Y_BASE;
+    obj_sim.valido := TRUE;
+    obj_sim.inviato:= FALSE;
+
+    (* ---- Inserisci in coda ---- *)
+    next_head_sim := obj_head + 1;
+    IF next_head_sim > MAX_OBJ_QUEUE THEN next_head_sim := 0; END_IF
+    IF next_head_sim <> obj_tail THEN
+        OBJ_queue[obj_head] := obj_sim;
+        obj_head := next_head_sim;
+        (* Aggiorna NUM_CAMPIONATI per coerenza stats — il SIM bypassa FB_Segmentazione.
+           Senza questa riga obj_rilevati_parz resta 0 e EFFICIENZA_PICK resta 0
+           contraddicendo la documentazione del file. *)
+        IF obj_sim.materiale >= 0 AND obj_sim.materiale <= 100 THEN
+            NUM_CAMPIONATI[obj_sim.materiale] := NUM_CAMPIONATI[obj_sim.materiale] + 1;
+        END_IF
+    ELSE
+        (* Coda piena — il simulatore non può iniettare *)
+        (* Questo è normale se ABIL_ROBOT=FALSE o robot non risponde *)
+        ROBOT_CODA_PIENA := TRUE;
+    END_IF
+END_IF
+END_PROGRAM

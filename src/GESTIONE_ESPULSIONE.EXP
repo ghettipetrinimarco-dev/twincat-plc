@@ -1,0 +1,317 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* @SYMFILEFLAGS := '2048' *)
+PROGRAM Gestione_Espulsione
+VAR
+	indice:INT;
+	apertura_MSI:ARRAY [1..NUM_TRACKS_NIR] OF TON;
+	TIME_APERTURA:TIME;
+	Ritardo: TON;
+	Fronte_stato:R_TRIG;
+	All_ek1100: BOOL;
+	Fronte_ok: R_TRIG;
+	Fronte_pres_min:R_TRIG;
+	Fronte_pres_max:R_TRIG;
+	min_press_ok:BOOL;
+	max_press_ok: BOOL;
+	(*Ingressi----------------------*)
+	EK1100_STATE AT %I*:UINT;
+	EL2004_STATE AT %I*:UINT;
+	OUT_1_STATE AT %I*:UINT;
+	OUT_2_STATE AT %I*:UINT;
+	OUT_3_STATE AT %I*:UINT;
+	OUT_4_STATE AT %I*:UINT;
+	OUT_5_STATE AT %I*:UINT;
+	OUT_6_STATE AT %I*:UINT;
+	OUT_7_STATE AT %I*:UINT;
+	OUT_8_STATE AT %I*:UINT;
+	ANALOG_IN_STATE AT %I*:UINT;
+	PRESSIONE AT %I*:INT;
+	FLUSSOSTATO AT %I*:INT;
+	(*Uscite------------------------*)
+	Out_1 AT %Q*:BOOL;
+	Out_2 AT %Q*:BOOL;
+	Out_3 AT %Q*:BOOL;
+	Out_4 AT %Q*:BOOL;
+	Out_5 AT %Q*:BOOL;
+	Out_6 AT %Q*:BOOL;
+	Out_7 AT %Q*:BOOL;
+	Out_8 AT %Q*:BOOL;
+	Out_9 AT %Q*:BOOL;
+	Out_10 AT %Q*:BOOL;
+	Out_11 AT %Q*:BOOL;
+	Out_12 AT %Q*:BOOL;
+	Out_13 AT %Q*:BOOL;
+	Out_14 AT %Q*:BOOL;
+	Out_15 AT %Q*:BOOL;
+	Out_16 AT %Q*:BOOL;
+	Out_17 AT %Q*:BOOL;
+	Out_18 AT %Q*:BOOL;
+	Out_19 AT %Q*:BOOL;
+	Out_20 AT %Q*:BOOL;
+	Out_21 AT %Q*:BOOL;
+	Out_22 AT %Q*:BOOL;
+	Out_23 AT %Q*:BOOL;
+	Out_24 AT %Q*:BOOL;
+	Out_25 AT %Q*:BOOL;
+	Out_26 AT %Q*:BOOL;
+	Out_27 AT %Q*:BOOL;
+	Out_28 AT %Q*:BOOL;
+	Out_29 AT %Q*:BOOL;
+	Out_30 AT %Q*:BOOL;
+	Out_31 AT %Q*:BOOL;
+	Out_32 AT %Q*:BOOL;
+	Out_33 AT %Q*:BOOL;
+	Out_34 AT %Q*:BOOL;
+	Out_35 AT %Q*:BOOL;
+	Out_36 AT %Q*:BOOL;
+	Out_37 AT %Q*:BOOL;
+	Out_38 AT %Q*:BOOL;
+	Out_39 AT %Q*:BOOL;
+	Out_40 AT %Q*:BOOL;
+	Out_41 AT %Q*:BOOL;
+	Out_42 AT %Q*:BOOL;
+	Out_43 AT %Q*:BOOL;
+	Out_44 AT %Q*:BOOL;
+	Out_45 AT %Q*:BOOL;
+	Out_46 AT %Q*:BOOL;
+	Out_47 AT %Q*:BOOL;
+	Out_48 AT %Q*:BOOL;
+	Out_49 AT %Q*:BOOL;
+	Out_50 AT %Q*:BOOL;
+	Out_51 AT %Q*:BOOL;
+	Out_52 AT %Q*:BOOL;
+	Out_53 AT %Q*:BOOL;
+	Out_54 AT %Q*:BOOL;
+	Out_55 AT %Q*:BOOL;
+	Out_56 AT %Q*:BOOL;
+	Out_57 AT %Q*:BOOL;
+	Out_58 AT %Q*:BOOL;
+	Out_59 AT %Q*:BOOL;
+	Out_60 AT %Q*:BOOL;
+	Out_61 AT %Q*:BOOL;
+	Out_62 AT %Q*:BOOL;
+	Out_63 AT %Q*:BOOL;
+	Out_64 AT %Q*:BOOL;
+	Out_65 AT %Q*:BOOL;
+	Out_66 AT %Q*:BOOL;
+	Out_67 AT %Q*:BOOL;
+	Out_68 AT %Q*:BOOL;
+	Out_69 AT %Q*:BOOL;
+	Out_70 AT %Q*:BOOL;
+	Out_71 AT %Q*:BOOL;
+	Out_72 AT %Q*:BOOL;
+	Out_73 AT %Q*:BOOL;
+	Out_74 AT %Q*:BOOL;
+	Out_75 AT %Q*:BOOL;
+	Out_76 AT %Q*:BOOL;
+	Out_77 AT %Q*:BOOL;
+	Out_78 AT %Q*:BOOL;
+	Out_79 AT %Q*:BOOL;
+	Out_80 AT %Q*:BOOL;
+	Out_81 AT %Q*:BOOL;
+	Out_82 AT %Q*:BOOL;
+	Out_83 AT %Q*:BOOL;
+	Out_84 AT %Q*:BOOL;
+	Out_85 AT %Q*:BOOL;
+	Out_86 AT %Q*:BOOL;
+	Out_87 AT %Q*:BOOL;
+	Out_88 AT %Q*:BOOL;
+	Out_89 AT %Q*:BOOL;
+	Out_90 AT %Q*:BOOL;
+	Out_91 AT %Q*:BOOL;
+	Out_92 AT %Q*:BOOL;
+	Out_93 AT %Q*:BOOL;
+	Out_94 AT %Q*:BOOL;
+	Out_95 AT %Q*:BOOL;
+	Out_96 AT %Q*:BOOL;
+	Out_97 AT %Q*:BOOL;
+	Out_98 AT %Q*:BOOL;
+	Out_99 AT %Q*:BOOL;
+	Out_100 AT %Q*:BOOL;
+	Out_101 AT %Q*:BOOL;
+	Out_102 AT %Q*:BOOL;
+	Out_103 AT %Q*:BOOL;
+	Out_104 AT %Q*:BOOL;
+	Out_105 AT %Q*:BOOL;
+	Out_106 AT %Q*:BOOL;
+	Out_107 AT %Q*:BOOL;
+	Out_108 AT %Q*:BOOL;
+	Out_109 AT %Q*:BOOL;
+	Out_110 AT %Q*:BOOL;
+	Out_111 AT %Q*:BOOL;
+	Out_112 AT %Q*:BOOL;
+	Out_113 AT %Q*:BOOL;
+	Out_114 AT %Q*:BOOL;
+	Out_115 AT %Q*:BOOL;
+	Out_116 AT %Q*:BOOL;
+	Out_117 AT %Q*:BOOL;
+	i: INT;
+END_VAR
+(* @END_DECLARATION := '0' *)
+TIME_APERTURA:=INT_TO_TIME(APERTURA_EV);
+(*Durata apertura elettrovalvole MSI*)
+IF NOT TEMPO_VARIABILE THEN
+	FOR indice:=1 TO NUM_TRACKS_NIR DO
+		apertura_MSI[indice](IN:=Output_NIR[indice] , PT:=TIME_APERTURA , Q=> , ET=> );
+		IF apertura_MSI[indice].Q THEN Output_NIR[indice]:=FALSE; END_IF
+	END_FOR
+END_IF
+(*Diagnostica comunicatore ethernet*)
+Ritardo(IN:=(EK1100_STATE <> 8) , PT:=T#3s , Q=> , ET=> );
+Fronte_stato(CLK:=Ritardo.Q , Q=> );
+Fronte_ok(CLK:=(EK1100_STATE=8) , Q=> );
+IF Fronte_stato.Q THEN All_ek1100:=TRUE; END_IF
+IF cancella_espulsione OR Fronte_ok.Q THEN All_ek1100:=FALSE; cancella_espulsione:=FALSE; END_IF
+(*Diagnostica I/O*)
+IF EK1100_STATE<>8 OR OUT_1_STATE<>8 OR OUT_2_STATE<>8 OR OUT_3_STATE<>8
+OR OUT_4_STATE<>8 OR OUT_5_STATE<>8 OR OUT_6_STATE<>8 OR OUT_7_STATE<>8
+OR OUT_8_STATE<>8 OR ANALOG_IN_STATE<>8 THEN DIAGNOSTICA_OK:=FALSE; ELSE DIAGNOSTICA_OK:=TRUE; END_IF
+(*Pressione*)
+Pressione_aria:=INT_TO_REAL(PRESSIONE)*10/32767;
+IF Pressione_aria<Press_aria_min THEN Press_aria_min:=Pressione_aria; END_IF
+IF Set_pres_max > 0 THEN
+	IF Pressione_aria < Set_pres_min THEN min_press_ok:=TRUE; END_IF
+	IF Pressione_aria > Set_pres_min +0.5 THEN min_press_ok:=FALSE; END_IF
+	Fronte_pres_min(CLK:=min_press_ok , Q=> );
+	IF  Fronte_pres_min.Q  AND Speed>0.5 THEN
+		Info_Msg[indice_msg_inf]:=7;
+		indice_msg_inf:=indice_msg_inf+1;
+		IF indice_msg_inf >= MAX_INF THEN indice_msg_inf:=0; END_IF
+	END_IF
+	IF Pressione_aria < Set_pres_max - 0.5 THEN max_press_ok:=FALSE; END_IF
+	IF Pressione_aria > Set_pres_max THEN max_press_ok:=TRUE; END_IF
+	Fronte_pres_max(CLK:=max_press_ok , Q=> );
+	IF  Fronte_pres_max.Q AND Speed>0.5 THEN
+		Info_Msg[indice_msg_inf]:=8;
+		indice_msg_inf:=indice_msg_inf+1;
+		IF indice_msg_inf >= MAX_INF THEN indice_msg_inf:=0; END_IF
+	END_IF
+END_IF
+(* Flussostato *)
+Flussostato_aria:=INT_TO_REAL(FLUSSOSTATO)*10/32767;
+(* Scrittura uscite-----------------------------------------------------*)
+Out_1:=CMD_OP_EV[1] OR Output_NIR[1];
+Out_2:=CMD_OP_EV[2] OR Output_NIR[2];
+Out_3:=CMD_OP_EV[3] OR Output_NIR[3];
+Out_4:=CMD_OP_EV[4] OR Output_NIR[4];
+Out_5:=CMD_OP_EV[5] OR Output_NIR[5];
+Out_6:=CMD_OP_EV[6] OR Output_NIR[6];
+Out_7:=CMD_OP_EV[7] OR Output_NIR[7];
+Out_8:=CMD_OP_EV[8] OR Output_NIR[8];
+Out_9:=CMD_OP_EV[9] OR Output_NIR[9];
+Out_10:=CMD_OP_EV[10] OR Output_NIR[10];
+Out_11:=CMD_OP_EV[11] OR Output_NIR[11];;
+Out_12:=CMD_OP_EV[12] OR Output_NIR[12];
+Out_13:=CMD_OP_EV[13] OR Output_NIR[13];
+Out_14:=CMD_OP_EV[14] OR Output_NIR[14];
+Out_15:=CMD_OP_EV[15] OR Output_NIR[15];
+Out_16:=CMD_OP_EV[16] OR Output_NIR[16];
+Out_17:=CMD_OP_EV[17] OR Output_NIR[17];
+Out_18:=CMD_OP_EV[18] OR Output_NIR[18];
+Out_19:=CMD_OP_EV[19] OR Output_NIR[19];
+Out_20:=CMD_OP_EV[20] OR Output_NIR[20];
+Out_21:=CMD_OP_EV[21] OR Output_NIR[21];
+Out_22:=CMD_OP_EV[22] OR Output_NIR[22];
+Out_23:=CMD_OP_EV[23] OR Output_NIR[23];
+Out_24:=CMD_OP_EV[24] OR Output_NIR[24];
+Out_25:=CMD_OP_EV[25] OR Output_NIR[25];
+Out_26:=CMD_OP_EV[26] OR Output_NIR[26];
+Out_27:=CMD_OP_EV[27] OR Output_NIR[27];
+Out_28:=CMD_OP_EV[28] OR Output_NIR[28];
+Out_29:=CMD_OP_EV[29] OR Output_NIR[29];
+Out_30:=CMD_OP_EV[30] OR Output_NIR[30];
+Out_31:=CMD_OP_EV[31] OR Output_NIR[31];
+Out_32:=CMD_OP_EV[32] OR Output_NIR[32];
+Out_33:=CMD_OP_EV[33] OR Output_NIR[33];
+Out_34:=CMD_OP_EV[34] OR Output_NIR[34];
+Out_35:=CMD_OP_EV[35] OR Output_NIR[35];
+Out_36:=CMD_OP_EV[36] OR Output_NIR[36];
+Out_37:=CMD_OP_EV[37] OR Output_NIR[37];
+Out_38:=CMD_OP_EV[38] OR Output_NIR[38];
+Out_39:=CMD_OP_EV[39] OR Output_NIR[39];
+Out_40:=CMD_OP_EV[40] OR Output_NIR[40];
+Out_41:=CMD_OP_EV[41] OR Output_NIR[41];
+Out_42:=CMD_OP_EV[42] OR Output_NIR[42];
+Out_43:=CMD_OP_EV[43] OR Output_NIR[43];
+Out_44:=CMD_OP_EV[44] OR Output_NIR[44];
+Out_45:=CMD_OP_EV[45] OR Output_NIR[45];
+Out_46:=CMD_OP_EV[46] OR Output_NIR[46];
+Out_47:=CMD_OP_EV[47] OR Output_NIR[47];
+Out_48:=CMD_OP_EV[48] OR Output_NIR[48];
+Out_49:=CMD_OP_EV[49] OR Output_NIR[49];
+Out_50:=CMD_OP_EV[50] OR Output_NIR[50];
+Out_51:=CMD_OP_EV[51] OR Output_NIR[51];
+Out_52:=CMD_OP_EV[52] OR Output_NIR[52];
+Out_53:=CMD_OP_EV[53] OR Output_NIR[53];
+Out_54:=CMD_OP_EV[54] OR Output_NIR[54];
+Out_55:=CMD_OP_EV[55] OR Output_NIR[55];
+Out_56:=CMD_OP_EV[56] OR Output_NIR[56];
+Out_57:=CMD_OP_EV[57] OR Output_NIR[57];
+Out_58:=CMD_OP_EV[58] OR Output_NIR[58];
+Out_59:=CMD_OP_EV[59] OR Output_NIR[59];
+Out_60:=CMD_OP_EV[60] OR Output_NIR[60];
+Out_61:=CMD_OP_EV[61] OR Output_NIR[61];
+Out_62:=CMD_OP_EV[62] OR Output_NIR[62];
+Out_63:=CMD_OP_EV[63] OR Output_NIR[63];
+Out_64:=CMD_OP_EV[64] OR Output_NIR[64];
+Out_65:=CMD_OP_EV[65] OR Output_NIR[65];
+Out_66:=CMD_OP_EV[66] OR Output_NIR[66];
+Out_67:=CMD_OP_EV[67] OR Output_NIR[67];
+Out_68:=CMD_OP_EV[68] OR Output_NIR[68];
+Out_69:=CMD_OP_EV[69] OR Output_NIR[69];
+Out_70:=CMD_OP_EV[70] OR Output_NIR[70];
+Out_71:=CMD_OP_EV[71] OR Output_NIR[71];
+Out_72:=CMD_OP_EV[72] OR Output_NIR[72];
+Out_73:=CMD_OP_EV[73] OR Output_NIR[73];
+Out_74:=CMD_OP_EV[74] OR Output_NIR[74];
+Out_75:=CMD_OP_EV[75] OR Output_NIR[75];
+Out_76:=CMD_OP_EV[76] OR Output_NIR[76];
+Out_77:=CMD_OP_EV[77] OR Output_NIR[77];
+Out_78:=CMD_OP_EV[78] OR Output_NIR[78];
+Out_79:=CMD_OP_EV[79] OR Output_NIR[79];
+Out_80:=CMD_OP_EV[80] OR Output_NIR[80];
+Out_81:=CMD_OP_EV[81] OR Output_NIR[81];
+Out_82:=CMD_OP_EV[82] OR Output_NIR[82];
+Out_83:=CMD_OP_EV[83] OR Output_NIR[83];
+Out_84:=CMD_OP_EV[84] OR Output_NIR[84];
+Out_85:=CMD_OP_EV[85] OR Output_NIR[85];
+Out_86:=CMD_OP_EV[86] OR Output_NIR[86];
+Out_87:=CMD_OP_EV[87] OR Output_NIR[87];
+Out_88:=CMD_OP_EV[88] OR Output_NIR[88];
+Out_89:=CMD_OP_EV[89] OR Output_NIR[89];
+Out_90:=CMD_OP_EV[90] OR Output_NIR[90];
+Out_91:=CMD_OP_EV[91] OR Output_NIR[91];
+Out_92:=CMD_OP_EV[92] OR Output_NIR[92];
+Out_93:=CMD_OP_EV[93] OR Output_NIR[93];
+Out_94:=CMD_OP_EV[94] OR Output_NIR[94];
+Out_95:=CMD_OP_EV[95] OR Output_NIR[95];
+Out_96:=CMD_OP_EV[96] OR Output_NIR[96];
+Out_97:=CMD_OP_EV[97] OR Output_NIR[97];
+Out_98:=CMD_OP_EV[98] OR Output_NIR[98];
+Out_99:=CMD_OP_EV[99] OR Output_NIR[99];
+Out_100:=CMD_OP_EV[100] OR Output_NIR[100];
+Out_101:=CMD_OP_EV[101] OR Output_NIR[101];
+Out_102:=CMD_OP_EV[102] OR Output_NIR[102];
+Out_103:=CMD_OP_EV[103] OR Output_NIR[103];
+Out_104:=CMD_OP_EV[104] OR Output_NIR[104];
+Out_105:=CMD_OP_EV[105] OR Output_NIR[105];
+Out_106:=CMD_OP_EV[106] OR Output_NIR[106];
+Out_107:=CMD_OP_EV[107] OR Output_NIR[107];
+Out_108:=CMD_OP_EV[108] OR Output_NIR[108];
+Out_109:=CMD_OP_EV[109] OR Output_NIR[109];
+Out_110:=CMD_OP_EV[110] OR Output_NIR[110];
+Out_111:=CMD_OP_EV[111] OR Output_NIR[111];
+Out_112:=CMD_OP_EV[112] OR Output_NIR[112];
+Out_113:=CMD_OP_EV[113] OR Output_NIR[113];
+Out_114:=CMD_OP_EV[114] OR Output_NIR[114];
+Out_115:=CMD_OP_EV[115] OR Output_NIR[115];
+Out_116:=CMD_OP_EV[116] OR Output_NIR[116];
+Out_117:=CMD_OP_EV[117] OR Output_NIR[117];
+
+FOR i:=1 TO NUM_TRACKS_NIR DO
+	IF CMD_OP_EV[i] OR Output_NIR[i] THEN Output_visu[i]:=1; ELSE Output_visu[i]:=0; END_IF
+END_FOR
+
+END_PROGRAM

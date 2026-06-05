@@ -1,0 +1,20 @@
+RESOURCE
+
+TASK Input_Output (PRIORITY := 0, INTERVAL := T#0.100ms);
+Gestione_Encoder_Robot();
+Sensore_NIR();
+{Additional_info : 1,0,0,0,1,4294967295}
+END_TASK
+
+TASK Gestione_Robot_Task (PRIORITY := 1, INTERVAL := T#10ms);
+Gestione_Robot();
+{Additional_info : 1,0,0,0,1,4294967295}
+END_TASK
+
+TASK Elaboration (PRIORITY := 2, INTERVAL := T#10ms);
+Processing_Robot();
+(* SIM_Robot(); — abilitare durante test offline, disabilitare in produzione *)
+{Additional_info : 1,0,0,0,1,4294967295}
+END_TASK
+
+END_RESOURCE

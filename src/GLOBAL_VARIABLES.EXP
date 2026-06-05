@@ -1,0 +1,157 @@
+(* @NESTEDCOMMENTS := 'Yes' *)
+(* @GLOBAL_VARIABLE_LIST := 'Global_Variables' *)
+(* @PATH := '' *)
+(* @OBJECTFLAGS := '0, 8' *)
+(* @SYMFILEFLAGS := '2048' *)
+VAR_GLOBAL CONSTANT
+	IMPULSI_ENCODER:UINT:=250; (*Impulsi encoder*)
+	MAX_COUNTER:UDINT:=4294967295;(*4294967295=max valore del counter - 999=max valore del counter con 250 impulsi a giro (250x4)-1*)
+	SVILUPPO_ESTERNO:REAL:=656; (*Sviluppo esterno dell'asse su cui è collegato l'encoder in mm*)(*656 selezionatrice casa di prova*)
+	(*Paramteri Sensore NIR*)
+	IP_ADRESS_SENSOR_NIR:STRING(15):='192.168.0.10'; (*Indirizzo IP sensore LLA*)
+	IP_PORT_SENSOR_NIR:UDINT:=1803; (*Porta UDP sensore LLA*)
+	IP_LOCAL:STRING(15):='192.168.0.1'; (*Indirizzo locale apllicazione TWINCAT sensore LLA*)
+	IP_PORT_LOCAL:UDINT:=1803;(*Porta locale applicazione TWINCAT sensore LLA*)
+	NUM_TRACKS_NIR:INT:=117;(*Numero delle traccie NIR*)
+	RX_NUM_NIR:INT:=121;(*Numero dei byte da leggere dal sensore è calcolato come:NUM_TRACKS_NIR+5-1*)
+	BUFFER_SIZE:INT:=150; (*Dimensione del buffer di memorizzazione dati per poi espellerli*)
+	BUFFER_VISU:INT:=289; (*Dimensione del visu*)
+	BUFFER_STORICO:INT:=199; (*Dimensione del buffer storico*)
+	MAX_INF:UINT:=50;(*Numero massimo di righe di informazione*)
+	data1_scadenza:DATE_AND_TIME:=DT#2040-01-01-10:00:00;(*Anno-mese-giorno-ora-minuti-secondi    esempio DT#2041-09-01-09:54:29*)
+	data2_scadenza:DATE_AND_TIME:=DT#2040-01-01-10:00:00;(*Anno-mese-giorno-ora-minuti-secondi    esempio DT#2041-09-01-09:54:29*)
+	data3_scadenza:DATE_AND_TIME:=DT#2040-01-01-10:00:00;(*Anno-mese-giorno-ora-minuti-secondi    esempio DT#2041-09-01-09:54:29*)
+	data4_scadenza:DATE_AND_TIME:=DT#2040-01-01-10:00:00;(*Anno-mese-giorno-ora-minuti-secondi    esempio DT#2041-09-01-09:54:29*)
+	data5_scadenza:DATE_AND_TIME:=DT#2040-01-01-10:00:00;(*Anno-mese-giorno-ora-minuti-secondi    esempio DT#2041-09-01-09:54:29*)
+	data6_scadenza:DATE_AND_TIME:=DT#2040-01-01-10:00:00;(*Anno-mese-giorno-ora-minuti-secondi    esempio DT#2041-09-01-09:54:29*)
+	intervallo_ore_1:UDINT:=10000; (*intervallo in ore da ora alla prima data*)
+	intervallo_ore_2:UDINT:=10000; (*intervallo in ore seconda data dalla scadenza prima data*)
+	intervallo_ore_3:UDINT:=10000; (*intervallo in ore terza data dalla scadenza seconda data*)
+	intervallo_ore_4:UDINT:=10000; (*intervallo in ore quarta data dalla scadenza terza data*)
+	intervallo_ore_5:UDINT:=10000; (*intervallo in ore quinta data dalla scadenza quarta data*)
+	intervallo_ore_6:UDINT:=10000; (*intervallo in ore sesta data dalla scadenza quinta data*)
+	END_VAR
+VAR_GLOBAL
+	Errore_connessione_sensore AT %Q*:BOOL; (*Errore di sensore e altri errori*)
+	Macchina_pronta AT %Q*:BOOL;
+	Pressione_aria:REAL;
+	Flussostato_aria:REAL;
+	start_storico:BOOL; (*Avvio salvataggio dati*)
+	storico_full_1:BOOL; (*Storico 1 pieno*)
+	storico_full_2:BOOL; (*Storico 2 pieno*)
+	storico_1:ARRAY [0..BUFFER_STORICO,1..NUM_TRACKS_NIR] OF BYTE;
+	storico_2:ARRAY [0..BUFFER_STORICO,1..NUM_TRACKS_NIR] OF BYTE;
+	matrix_visu:ARRAY [0..BUFFER_VISU,1..NUM_TRACKS_NIR] OF BYTE; (*Visualizzazione istantanea del prodotto*)
+	matrix_data:ARRAY [0..24,1..25] OF BYTE;
+	matrix_elab:ARRAY [0..24,1..25] OF BYTE;
+	matrix_data_bool:ARRAY [0..24,1..25] OF BOOL;
+	matrix_data_bool_inq:ARRAY [0..24,1..25] OF BOOL;
+	matrix_elab_bool:ARRAY [0..24,1..25] OF BOOL;
+	matrix_elab_perc:ARRAY [0..24,1..25] OF REAL;
+	Start_pezzo:BOOL;
+	pulisci:BOOL;
+	Current_page:STRING(20); (*Pagina corrente - non utilizzata*)
+	ISTO_EV:ARRAY [1..NUM_TRACKS_NIR] OF REAL;
+	num_obj:ARRAY [1..NUM_TRACKS_NIR] OF UDINT;
+	MSG_ERRORE_CALIB:BOOL; (*per visualizzare pop up errore calibrazione*)
+	cancella:BOOL; (*Cancella gli errori*)
+	cancella_encoder:BOOL; (*Cancella gli errori*)
+	cancella_espulsione:BOOL; (*Cancella gli errori*)
+	SPEED_DELAY: TON; (*Ritrado velocità per elaborazione*)
+	INDEX_NIR: UINT;(*indice del buffer del NIR*)
+	SPEED_OLD: REAL; (*Velocità aggiornata ogni 3 sec*)
+	DISTANZA_EV: UDINT;(*Distanza sensore NIR calcolata in base agli impulsi encoder*)
+	RESET_PESO:BOOL;(*Reset del peso totale del materiale selezionato*)
+	CARICO_MIN:REAL;(*Percentuale di carico macchina al min*)
+	KG_MINUTI:REAL;(*Kg di prodotto selezionato al minuto*)
+	CANCELLA_INFO: BOOL;(*Comando cancellazzione informazioni*)
+	DATA_ORA:TIMESTRUCT;(*Data ora sistema*)
+	VISU_TRACK: ARRAY [1..NUM_TRACKS_NIR] OF INT;(*Visualizzazione lettura*)
+	WHITE_CALIB:BOOL;(*Calibrazione del BIANCO-NIR*)
+	BLACK_CALIB:BOOL;(*Calibrazione del NERO-NIR*)
+	SPEGNI:BOOL;(*Spegni il pc se =1*)
+	RIAVVIO:BOOL;(*Riavvio il pc se =1*)
+	DIAGNOSTICA_OK:BOOL;(*Diagnostica Input/Output ok =1*)
+	NIR_ATTIVO:BOOL;(*Stato del sensore Nir*)
+	MSI_data:ARRAY [0..BUFFER_SIZE] OF RX_NIR;(*Buffer di campionamento dati*)
+	MSI_elab:ARRAY [0..BUFFER_SIZE] OF RX_NIR_ELAB;(*Buffer di campionamento dati elaborati*)
+	Output_NIR: ARRAY [1..NUM_TRACKS_NIR] OF BOOL; (*Dati da espellere*)
+	RESET_SELEZIONATI:BOOL;(*Reset contatore pezzi selezionati*)
+	RESET_CAMPIONATI:BOOL;(*Reset contatore pezzi campionati*)
+	PASSO_ENCODER: UDINT;(*mm ad ogni impulso encoder*)
+	SPEED:REAL; (*Velocità del nastro*)
+	CPU_USAGE:UDINT;(*Utilizzo della CPU*)
+	ENCODER_OK:BOOL;(*Stato dell'encoder ok*)
+	INFO_MSG:ARRAY[0..MAX_INF]OF INT;
+	INDICE_MSG_INF:UINT:=0; (*indice dell'array dei messaggi INFO*)
+	CMD_OP_EV:ARRAY [1..NUM_TRACKS_NIR] OF BOOL; (*Comandi manuali*)
+	SALVA_DATI:BOOL; (*Salvataggio dati persistent*)
+	LINEE:INT;(*Numero linee al secondo NIR*)
+	ETH_LINK_OK:BOOL;(*Stato collegamento ethernet NIR*)
+	ETH_LINK_OK_VISU:BOOL;(*Stato collegamento ethernet NIR ritardato per visualizzazione*)
+	Perc_carico_parz_min:UDINT;(*Numero per il calolo del carico macchina minuto*)
+	Perc_carico:REAL;(*Carico macchina istantaneo*)
+	n_volte_min: UDINT; (*Numero per il calolo del carico macchina minuto*)
+	CMD_LOAD:BOOL; (*Carica la identification nel nir nella riga del primo file Recogn_file.txt NIR*)
+	OUTPUT_VISU: ARRAY [1..NUM_TRACKS_NIR] OF UINT; (*Dati visualizzare histogramma*)
+	CMD_GET_TYPE:BOOL; (*Carica i tipi di dati*)
+	OK_CMD_GET_TYPE:BOOL; (*Carica i tipi di dati - finito- sia true che false perche OK_CMD_GET_TYPE:= NOT OK_CMD_GET_TYPE*)
+	CMD_AUTOSAVE_START:BOOL; (*Comando salva dati start*)
+	CMD_AUTOSAVE_STOP:BOOL; (*Comado salva dati stop*)
+	Press_aria_min:REAL:=100; (*Pressione aria minima al minuto, viene resettata =100 dall'HMI*)
+END_VAR
+VAR_GLOBAL PERSISTENT
+	Black_automatic_perc:REAL;
+	Machine_name:STRING:='NIR_1500.117';
+	Skip_ev:INT;
+	Trig_option:BOOL;
+	Set_pres_min:REAL;
+	Set_pres_max:REAL;
+	Set_fluss_min:REAL;
+	Set_fluss_max:REAL;
+	TEMPO_VARIABILE:BOOL:=FALSE; (*Tempo di sparo variabile*)
+	NUM_CODICI:INT:=68;(*Numero dei codici attivi*)
+	START_PARZIALE:BOOL:=FALSE; (*Start parziale dati campionati*)
+	LUNGHEZZA_REGIONE:INT:=2; (*Lunghezza regione per calcolo inquinamento*)
+	LARGHEZZA_REGIONE:INT:=2; (*Lunghezza regione per calcolo inquinamento*)
+	PERC_INQUINAMENTO:REAL:=20;(*Percentuale di inquinamento*)
+	NUM_LOAD_ID:BYTE:=16#01; (*Numero del file nella tabella recog_file da caricare*)
+	STEP:UINT:=1; (*Per elaborazione dei dati*)
+	COLOR_OPTION:BOOL:=FALSE; (*Opzione colore NIR*)
+	LED_TEMP_NIR:BOOL;(*Led temperatura sensore NIR - 1=errore*)
+	LED_CALIB_NIR:BOOL; (*Led stato calibrazione NIR -1=calibrazione in errore*)
+	FILE_ANALYSIS:STRING(150) :='C:\Users\Davide\Desktop\idHwaste-1.9\_idHwaste1.9_PETcolor.mt2';
+	FILE_COLOR:STRING(150) :='C:\Users\Davide\Desktop\idHwaste-1.9\_idHwaste1.9_PETcolor.mt2';
+	TEMPO_ORA:UINT; (*minuti di lavoro*)
+	INTERVALLO_ORE_ISTANTANEO:UDINT;(*ore attuali di utilizzo*)
+	ENABLE:BOOL;(*abilita funzionamento dell'intero sistema*)
+	NUM_PW:INT:=0;(*numero PW =10 disabilitato*)
+	PROCESSING_DATA:BOOL; (*abilita l'elaborazione dei dati*)
+	COUNT_TIME: UINT:=1; (*tempo di controllo carico obiettivi*)
+	SFONDO:BYTE:=16#FE; (*Esadecimale per definire lo sfondo*)
+	FATTORE_CARICO:REAL:=4.0;(*Fattore moltiplicativo percentuale di carico*)
+	PERCENTUALI:BOOL; (*Visualizzazione percentuali*)
+	PESO_TOTALE:REAL;(*Peso materiale selezionato *)
+	PESO_MATERIALE:UINT:=240;(*Peso specifico del materiale*)
+	ABIL_NIR:BOOL;(*Abilitatzione sistema NIR*)
+	DISTANZA:UINT:=200; (*Input distanza delle elettrovalvole dal sensore NIR in mm*)
+	APERTURA_EV:INT:=15;(*Durata apertura elettrovalvole*)
+	NUM_SELEZIONATI: ARRAY [0..100] OF UDINT; (*Numero dei materiali selezionati*)
+	PERC_SELEZIONATI: ARRAY[0..100] OF REAL; (*Percentuale dei materiali selezionati*)
+	NUM_CAMPIONATI: ARRAY [0..100] OF UDINT; (*Numero dei materiali campionati*)
+	PERC_CAMPIONATI: ARRAY [0..100] OF REAL; (*Percentuale dei materiali campionati*)
+	CODICI_MATERIALI: ARRAY [0..100] OF BYTE; (*Codici materiali letti in automatico da NIR*)
+	NOMI_MATERIALI: ARRAY [0..100,1..28] OF BYTE; (*Nomi materiali letti in automatico da NIR*)
+	MATERIALI_ATTIVI: ARRAY [0..100] OF BOOL; (*Materiali attivi per la selezione*)
+	NUM_CAMPIONATI_PARZIALI_tmp: ARRAY [0..100] OF UDINT; (*aux*)
+	NUM_CAMPIONATI_PARZIALI: ARRAY [0..100] OF UDINT; (*Numero dei materiali campionati parziali*)
+	PERC_CAMPIONATI_PARZIALI: ARRAY [0..100] OF REAL; (*Percentuale dei materiali campionati parziali*)
+END_VAR
+
+(* @OBJECT_END := 'Global_Variables' *)
+(* @CONNECTIONS := Global_Variables
+FILENAME : ''
+FILETIME : 0
+EXPORT : 0
+NUMOFCONNECTIONS : 0
+*)
