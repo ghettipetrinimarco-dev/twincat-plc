@@ -1,4 +1,6 @@
-# Mappa Registri Modbus TCP
+# Mappa Registri Modbus TCP — v5.0
+
+> Aggiornato: 2026-06-08 (sessione 8 — nuovi registri SPEED/LINEE/NIR, fix PESO_TOTALE overflow, comandi scrittura ABIL_NIR e reset contatori)
 
 ## Regole Generali
 
@@ -6,53 +8,88 @@
 |---|---|
 | Area PLC | `%MW0` |
 | Dichiarazione | `Modbus_Area AT %MW0 : ARRAY [0..51] OF WORD` |
-| Funzione Modbus | FC03 Read Holding Registers (da confermare) |
+| Funzione Modbus | FC03 Read Holding Registers |
 | Base indirizzo SCADA | **12288** (`0x3000`) |
 | Formula | `Indirizzo SCADA = 12288 + Indice Array PLC` |
-| Notazione client | Base 0 — PDU address (da confermare con Daniele) |
+| Offset Daniele (SELECT) | **+1** su tutti gli indirizzi — es. nostro [39]=12327, Daniele chiama 12328 |
 
-**Conversione REAL → WORD:** moltiplicare per `10.0` e convertire con `REAL_TO_WORD`.
-Il client SCADA divide per 10 per ottenere il valore reale.
-Esempio: `100.0%` → valore Modbus `1000`.
+**Scala REAL → WORD:** moltiplicare per `10.0` → client divide per 10.
+**PESO_TOTALE DWORD:** `peso_kg = Modbus_Area[5] × 65536 + Modbus_Area[41]` (senza decimali, precisione 1 kg).
 
-**Logica allarme:** `1 = OK (Marcia)`, `0 = Allarme` (logica invertita).
+---
 
 ## Mappa Completa
 
-| Indice Array | Indirizzo SCADA | Variabile PLC | Tipo PLC | Scala | Significato |
-|---|---|---|---|---|---|
-| 0 | 12288 | `carico_min` | REAL | ×10 | Carico minimo rilevato |
-| 1 | 12289 | — | — | — | **TODO: riservato o mancante?** |
-| 2 | 12290 | `Pressione_aria` | REAL | ×10 | Pressione aria compressa |
-| 3 | 12291 | `Flussostato_aria` | REAL | ×10 | Portata aria compressa |
-| 4 | 12292 | `intervallo_ore_istantaneo` | UDINT→WORD | — | Intervallo ore istantaneo ⚠️ |
-| 5 | 12293 | — | — | — | **TODO: riservato o mancante?** |
-| 6..21 | 12294..12309 | `PERC_SELEZIONATI[0..15]` | REAL | ×10 | Percentuali materiali selezionati |
-| 22..37 | 12310..12325 | `PERC_CAMPIONATI[0..15]` | REAL | ×10 | Percentuali materiali campionati |
-| 38 | 12326 | `DIAGNOSTICA_OK` | BOOL | 1=OK / 0=Allarme | Diagnostica generale |
-| 39 | 12327 | `ENABLE` | BOOL | 1=ON / 0=OFF | Abilitazione macchina (⚠️ verificare se logica invertita) |
-| 40 | 12328 | `KG_MINUTI` | REAL | ×10 | Kg/minuto |
-| 41 | 12329 | `PESO_TOTALE` | REAL | ×10 | Peso totale ciclo |
-| 42 | 12330 | `NUM_LOAD_ID` | BYTE→WORD | — | ID ricetta attiva (lettura) |
-| 43..49 | 12331..12337 | — | — | — | **TODO: ignoti, non ancora documentati** |
-| 50 | 12338 | *(Trigger)* | — | — | **NON GESTITO** dal PLC (vedi `eccezioni-vs-pdf.md`) |
-| 51 | 12339 | *(Numero Modello)* | WORD | — | **Scrittura SCADA:** ID ricetta. Se >0 → `CMD_LOAD:=TRUE` + auto-reset |
+| Indice | SCADA | Dan. (+1) | Dir. | Variabile PLC | Scala | Significato |
+|---|---|---|---|---|---|---|
+| 0 | 12288 | 12289 | R | `CARICO_MIN` | ×10 | % carico macchina al minuto |
+| 1 | 12289 | 12290 | R | `SPEED` | ×10 | Velocità nastro (m/s) |
+| 2 | 12290 | 12291 | R | `Pressione_aria` | ×10 | Pressione aria ⚠️ 0 se sensore non installato |
+| 3 | 12291 | 12292 | R | `Flussostato_aria` | ×10 | Flusso aria ⚠️ 0 se sensore non installato |
+| 4 | 12292 | 12293 | R | `INTERVALLO_ORE_ISTANTANEO` | — | Ore utilizzo ⚠️ tronca a 65535 (~18h) |
+| 5 | 12293 | 12294 | R | `PESO_TOTALE` HIGH | — | DWORD HIGH WORD (×65536) — **fix overflow** |
+| 6..21 | 12294..12309 | 12295..12310 | R | `PERC_SELEZIONATI[0..15]` | ×10 | % materiali selezionati (16 di 101) |
+| 22..37 | 12310..12325 | 12311..12326 | R | `PERC_CAMPIONATI[0..15]` | ×10 | % materiali campionati (16 di 101) |
+| 38 | 12326 | 12327 | R | `DIAGNOSTICA_OK` | — | 1=OK, 0=allarme I/O |
+| 39 | 12327 | 12328 | R | `SPEED>0.5 AND NIR_ATTIVO AND DIAGNOSTICA_OK` | — | **1=in lavorazione, 0=ferma** — fix sessione 7 |
+| 40 | 12328 | 12329 | R | `KG_MINUTI` | ×10 | Kg/minuto ⚠️ 0 su .33/.34 (REAL precision esaurita) |
+| 41 | 12329 | 12330 | R | `PESO_TOTALE` LOW | — | DWORD LOW WORD — **fix overflow** (era ×10) |
+| 42 | 12330 | 12331 | R | `NUM_LOAD_ID` | — | Ricetta attiva (BYTE) |
+| 43 | 12331 | 12332 | R | `LINEE` | — | Linee NIR al secondo (INT) |
+| 44 | 12332 | 12333 | R | `ABIL_NIR` stato | — | 1=NIR online, 0=NIR offline |
+| 45 | 12333 | 12334 | **W** | `ABIL_NIR` comando | — | Scrivere **1**=abilita, **2**=spegni. Auto-reset a 0. |
+| 46 | 12334 | 12335 | **W** | Reset contatori | — | bit0=RESET_SELEZIONATI, bit1=RESET_CAMPIONATI |
+| 47 | 12335 | 12336 | R | `ETH_LINK_OK` | — | 1=link sensore NIR ok, 0=link assente |
+| 48..50 | 12336..12338 | 12337..12339 | — | — | — | Riservati |
+| 51 | 12339 | 12340 | **W** | Cambio ricetta | — | Scrivere ID (1..255) → `CMD_LOAD:=TRUE`. Auto-reset a 0. ⚠️ non modificare senza accordo Daniele |
+
+---
+
+## Lettura PESO_TOTALE dal gestionale
+
+```
+peso_kg = Modbus_Area[5] × 65536 + Modbus_Area[41]
+```
+
+Esempio: [5]=2, [41]=405 → peso = 2×65536 + 405 = **131.477 kg**
+Max rappresentabile: 65535×65536 + 65535 = **~4,3 miliardi kg**
+
+---
+
+## Comandi in scrittura — Riepilogo
+
+| Registro (Daniele) | Azione | Come |
+|---|---|---|
+| 12334 | Abilita NIR + luci | Scrivere 1 |
+| 12334 | Spegni NIR + luci | Scrivere 2 |
+| 12335 | Reset % selezionati | Scrivere 1 (bit 0) |
+| 12335 | Reset % campionati | Scrivere 2 (bit 1) |
+| 12335 | Reset entrambi | Scrivere 3 (bit 0+1) |
+| 12340 | Carica ricetta N | Scrivere N (1..255) |
+
+---
 
 ## Warning Tecnici
 
-### ⚠️ Indice 4 — UDINT troncato a WORD
-`intervallo_ore_istantaneo` è UDINT (32 bit) ma viene assegnato a una WORD (16 bit) con `UDINT_TO_WORD`.
-Se il valore supera **65535** (~18 ore), il registro wrapperà a 0 silenziosamente.
-**Da chiarire:** comportamento voluto (valore non supera mai 65535) o bug latente?
+### ⚠️ PESO_TOTALE su .33/.34 — REAL precision esaurita
+`PESO_TOTALE` su .33 = 3.276.305 kg, su .34 simile. A queste grandezze la precisione REAL 32-bit
+è ~0.4 kg → incrementi per minuto non registrabili → `KG_MINUTI = 0`.
+`PESO_TOTALE` stesso viene trasmesso correttamente via DWORD (arrotondato a 1 kg).
+Fix definitivo: REAL → LREAL (richiede rebuild offline).
 
-### ⚠️ Indici 1 e 5 — Non scritti
-Questi indici non compaiono nel codice ST ricevuto. Potrebbero essere riservati per usi futuri o dimenticati.
-**Da chiarire prima di usarli.**
+### ⚠️ Pressione e Flussostato = 0 su .31/.32
+Confermato live: `PRESSIONE = 0` raw in `Gestione_Espulsione`. I moduli analogici
+(`ANALOG_IN_STATE=8`) funzionano ma i sensori fisici non sono installati/collegati su queste macchine.
+Non è un problema di codice né di Modbus.
 
-### ⚠️ Offset Base 0 / Base 1
-Se lo SCADA legge i dati sfasati di 1, correggere l'offset del client (±1).
-La notazione in uso con Daniele è da confermare strumentalmente su una lettura nota.
+### ⚠️ CARICO_MIN mostra 0 nel gestionale Evergreen
+Il valore è corretto nel PLC (22.81 confermato live). Daniele probabilmente legge il registro
+sbagliato per questo campo. Da verificare con lui quale indirizzo usa per "Carico minimo".
 
-### ℹ️ Zeri su PERC_SELEZIONATI / PERC_CAMPIONATI
-Valori a zero sono fisiologici: indicano che nessun materiale di quel tipo è transitato nel ciclo corrente.
-**Non sono errori di rete.** Verificare il transito reale sotto i sensori NIR prima di qualsiasi intervento.
+### ⚠️ Offset Daniele +1
+Daniele (SELECT Informatica) usa indirizzamento 1-based.
+Nostro registro N → Daniele chiama N+1.
+Verificato strumentalmente su registro 12327/12328 (sessione 7).
+
+### ℹ️ Zeri su PERC_SELEZIONATI/PERC_CAMPIONATI
+Valori zero fisiologici: nessun materiale di quel tipo transitato. Non intervenire lato rete.

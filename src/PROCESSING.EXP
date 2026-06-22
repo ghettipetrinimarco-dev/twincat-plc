@@ -278,24 +278,29 @@ IF SystemTaskInfoArr[3].cycleTimeExceeded THEN count_exceed:=count_exceed+1;END_
 
 (* --- FASE 1: LETTURA E POPOLAMENTO DATI --- *)
 Modbus_Area[0] := REAL_TO_WORD(carico_min * 10.0);
+Modbus_Area[1] := REAL_TO_WORD(SPEED * 10.0);
 Modbus_Area[2] := REAL_TO_WORD(Pressione_aria * 10.0);
 Modbus_Area[3] := REAL_TO_WORD(Flussostato_aria * 10.0);
 Modbus_Area[4] := UDINT_TO_WORD(intervallo_ore_istantaneo);
+Modbus_Area[5] := UDINT_TO_WORD(REAL_TO_UDINT(PESO_TOTALE) SHR 16);
 
 (* Mappatura degli array Percentuali (da indice 0 a 15) *)
 FOR idx_mb := 0 TO 15 DO
-	(* Offset 6 corrisponde a 12294, Offset 22 corrisponde a 12310 *)
 	Modbus_Area[6 + idx_mb]  := REAL_TO_WORD(PERC_SELEZIONATI[idx_mb] * 10.0);
 	Modbus_Area[22 + idx_mb] := REAL_TO_WORD(PERC_CAMPIONATI[idx_mb] * 10.0);
 END_FOR
 
 (* Stato Macchina *)
-IF DIAGNOSTICA_OK THEN Modbus_Area[38] := 1; ELSE Modbus_Area[38] := 0; END_IF;
-IF ENABLE THEN Modbus_Area[39] := 1; ELSE Modbus_Area[39] := 0; END_IF;
+IF DIAGNOSTICA_OK THEN Modbus_Area[38] := 1; ELSE Modbus_Area[38] := 0; END_IF
+IF (SPEED > 0.5 AND NIR_ATTIVO AND DIAGNOSTICA_OK) THEN Modbus_Area[39] := 1; ELSE Modbus_Area[39] := 0; END_IF
 
 Modbus_Area[40] := REAL_TO_WORD(KG_MINUTI * 10.0);
-Modbus_Area[41] := REAL_TO_WORD(PESO_TOTALE * 10.0);
+Modbus_Area[41] := UDINT_TO_WORD(REAL_TO_UDINT(PESO_TOTALE) AND 16#0000FFFF);
 Modbus_Area[42] := BYTE_TO_WORD(NUM_LOAD_ID);
+
+Modbus_Area[43] := INT_TO_WORD(LINEE);
+IF ABIL_NIR    THEN Modbus_Area[44] := 1; ELSE Modbus_Area[44] := 0; END_IF
+IF ETH_LINK_OK THEN Modbus_Area[47] := 1; ELSE Modbus_Area[47] := 0; END_IF
 
 
 (* --- FASE 2: SCRITTURA E CAMBIO RICETTA (Logica Davide) --- *)
@@ -307,4 +312,23 @@ IF Modbus_Comando_Old <> Modbus_Area[51] THEN
 	END_IF
 END_IF
 Modbus_Comando_Old := Modbus_Area[51];
+
+(* --- FASE 3: COMANDI IN SCRITTURA DA SCADA --- *)
+(* [45] ABIL_NIR: scrivere 1=abilita NIR, 2=spegni NIR. Si autoreset a 0. Stato corrente leggibile su [44]. *)
+IF Modbus_Area[45] = 1 THEN
+	ABIL_NIR := TRUE;
+	Modbus_Area[45] := 0;
+ELSIF Modbus_Area[45] = 2 THEN
+	ABIL_NIR := FALSE;
+	Modbus_Area[45] := 0;
+END_IF
+(* [46] Reset contatori: bit 0 = RESET_SELEZIONATI, bit 1 = RESET_CAMPIONATI *)
+IF Modbus_Area[46] AND 16#0001 THEN
+	RESET_SELEZIONATI := TRUE;
+	Modbus_Area[46] := Modbus_Area[46] AND 16#FFFE;
+END_IF
+IF Modbus_Area[46] AND 16#0002 THEN
+	RESET_CAMPIONATI := TRUE;
+	Modbus_Area[46] := Modbus_Area[46] AND 16#FFFD;
+END_IF
 END_PROGRAM

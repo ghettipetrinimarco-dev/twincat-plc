@@ -1,6 +1,6 @@
 # CONTEXT.md — Fonte di Verità del Progetto
 
-> Aggiornato: 2026-06-05 (sessione 7 — fix Modbus registro 12328 "macchina in lavorazione" su .33 e .34, coordinamento Daniele)
+> Aggiornato: 2026-06-08 (sessione 8 — Modbus v5.0: nuovi registri SPEED/LINEE/NIR/ETH, fix PESO_TOTALE overflow DWORD, comandi scrittura ABIL_NIR e reset contatori, fix [39] aggiornato nel repo)
 > Leggere sempre prima di toccare qualsiasi file.
 
 ---
@@ -127,25 +127,31 @@ Processing (ogni minuto):
 **Funzione:** FC03 Read Holding Registers (da confermare)
 **Scala REAL:** `valore × 10 → WORD` (client divide /10)
 
-| Indice | SCADA | Variabile | Scala | Note |
-|---|---|---|---|---|
-| 0 | 12288 | `CARICO_MIN` | ×10 | |
-| 1 | 12289 | — | — | Non scritto |
-| 2 | 12290 | `Pressione_aria` | ×10 | |
-| 3 | 12291 | `Flussostato_aria` | ×10 | |
-| 4 | 12292 | `INTERVALLO_ORE_ISTANTANEO` | — | UDINT→WORD ⚠️ tronca a 65535 |
-| 5 | 12293 | — | — | Non scritto |
-| 6..21 | 12294..12309 | `PERC_SELEZIONATI[0..15]` | ×10 | Solo primi 16 di 101 |
-| 22..37 | 12310..12325 | `PERC_CAMPIONATI[0..15]` | ×10 | Solo primi 16 di 101 |
-| 38 | 12326 | `DIAGNOSTICA_OK` | — | 1=OK, 0=Allarme |
-| 39 | 12327 | `SPEED>0.5 AND NIR_ATTIVO AND DIAGNOSTICA_OK` | — | **Fix sessione 7** — 1=in lavorazione, 0=ferma. Daniele legge come 12328 (+1 offset). |
-| 40 | 12328 | `KG_MINUTI` | ×10 | |
-| 41 | 12329 | `PESO_TOTALE` | ×10 | |
-| 42 | 12330 | `NUM_LOAD_ID` | — | Ricetta attiva (lettura) |
-| 43..50 | 12331..12338 | — | — | Non scritti |
-| 51 | 12339 | *(write target)* | — | SCADA scrive ID ricetta. Se >0: CMD_LOAD:=TRUE + reset |
+Mappa completa → `docs/modbus/mappa-registri.md`
 
-**⚠️ Registro 39:** Il valore `1` significa macchina BLOCCATA per licenza scaduta, NON "abilitata". Daniele deve interpretarlo come "stop forzato".
+| Indice | SCADA | Dan(+1) | Dir | Variabile | Scala | Note |
+|---|---|---|---|---|---|---|
+| 0 | 12288 | 12289 | R | `CARICO_MIN` | ×10 | |
+| 1 | 12289 | 12290 | R | `SPEED` | ×10 | **v5.0** |
+| 2 | 12290 | 12291 | R | `Pressione_aria` | ×10 | 0 se sensore non installato |
+| 3 | 12291 | 12292 | R | `Flussostato_aria` | ×10 | 0 se sensore non installato |
+| 4 | 12292 | 12293 | R | `INTERVALLO_ORE_ISTANTANEO` | — | ⚠️ tronca a 65535 |
+| 5 | 12293 | 12294 | R | `PESO_TOTALE` HIGH | — | **v5.0** DWORD fix overflow |
+| 6..21 | 12294..12309 | +1 | R | `PERC_SELEZIONATI[0..15]` | ×10 | |
+| 22..37 | 12310..12325 | +1 | R | `PERC_CAMPIONATI[0..15]` | ×10 | |
+| 38 | 12326 | 12327 | R | `DIAGNOSTICA_OK` | — | 1=OK |
+| 39 | 12327 | 12328 | R | `SPEED>0.5 AND NIR_ATTIVO AND DIAG_OK` | — | **Fix s7** 1=lavora |
+| 40 | 12328 | 12329 | R | `KG_MINUTI` | ×10 | 0 su .33/.34 (precision) |
+| 41 | 12329 | 12330 | R | `PESO_TOTALE` LOW | — | **v5.0** DWORD fix (era ×10) |
+| 42 | 12330 | 12331 | R | `NUM_LOAD_ID` | — | Ricetta attiva |
+| 43 | 12331 | 12332 | R | `LINEE` | — | **v5.0** linee NIR/s |
+| 44 | 12332 | 12333 | R | `ABIL_NIR` stato | — | **v5.0** 1=NIR online |
+| 45 | 12333 | 12334 | W | `ABIL_NIR` cmd | — | **v5.0** 1=abilita 2=spegni |
+| 46 | 12334 | 12335 | W | Reset contatori | — | **v5.0** bit0=sel bit1=camp |
+| 47 | 12335 | 12336 | R | `ETH_LINK_OK` | — | **v5.0** 1=link NIR ok |
+| 51 | 12339 | 12340 | W | Cambio ricetta | — | ⚠️ non modificare senza Daniele |
+
+**PESO_TOTALE DWORD:** `peso_kg = [5]×65536 + [41]`
 
 ---
 
@@ -219,11 +225,16 @@ Pacchetto dati: 121 byte (`RX_NUM_NIR=121` = 117 tracce + 5 header - 1)
 
 ### Critici
 - [x] **Unità DISTANZA**: **RISOLTO** — impulsi encoder. 200 × (656mm/250) = 524,8mm distanza fisica. Il commento nel codice che diceva "mm" era errato.
-- [ ] **Indici Modbus 43..50**: non scritti. Confermare che siano intenzionalmente vuoti
-- [ ] **Indici 1 e 5**: non scritti. Riservati?
-- [x] **Notazione SCADA Daniele**: **RISOLTO** — usa Base 1 (+1 su tutti i nostri indirizzi). Confermato via email 2026-06-04.
-- [x] **Registro 39 lato SCADA**: **RISOLTO** — fix sessione 7. Ora scrive SPEED>0.5 AND NIR_ATTIVO AND DIAGNOSTICA_OK. Daniele legge come 12328. Fix applicato su .33 e .34. Da applicare su .31 e .32.
-- [ ] **Fix registro 12328 su .31 e .32**: stessa modifica del .33/.34 — priorità alta
+- [x] **Indici Modbus 43..50**: **v5.0** — [43]=LINEE, [44]=ABIL_NIR stato, [45]=ABIL_NIR cmd, [46]=reset cmd, [47]=ETH_LINK_OK. [48..50] riservati.
+- [x] **Indici 1 e 5**: **v5.0** — [1]=SPEED×10, [5]=PESO_TOTALE HIGH WORD
+- [x] **Notazione SCADA Daniele**: **RISOLTO** — usa Base 1 (+1). Confermato email 2026-06-04.
+- [x] **Registro 39 lato SCADA**: **RISOLTO** — fix sessione 7+8. Applicato su tutte e 4 le macchine.
+- [x] **Fix registro 12328 su .31 e .32**: **APPLICATO** sessione 8.
+- [ ] **Modbus v5.0 da applicare in produzione**: codice pronto nel repo, applicare Online Change su tutte e 4
+- [ ] **CARICO_MIN = 0 nel gestionale**: Daniele legge registro sbagliato — verificare con lui
+- [ ] **PESO_TOTALE DWORD**: comunicare a Daniele nuova formula [5]×65536+[41]
+- [ ] **Problema cambio ricetta da Mago**: CMD_LOAD cancellato silenziosamente — diagnosticare All_load e Stato
+- [ ] **PESO_PARZIALE** (rebuild offline): codice pronto in notes/peso_parziale_da_applicare.md
 
 ### Informativi
 - [ ] Versione TwinCAT 2 (build esatta)
@@ -368,3 +379,4 @@ Esempio: @42,58.5,1834.6,200.0,0.0,0.5,320.0,340.0,50.0,0.3,#
 | 2026-05-26 | Quinta sessione: completamento progetto robot — ACK TCP (stato 4 ATTESA_ACK), statistiche GVL (PICK_AL_MINUTO/EFFICIENZA/CODA_UTILIZZO/ROBOT_CODA_PIENA), processing_robot.txt, RAPID v2.1 con ACK, TASK_CONFIG.md, GVL_COMPLETO_ROBOT.EXP aggiornato |
 | 2026-05-27 | Sesta sessione: import TwinCAT 2 — diagnostica e fix iterativo errori .EXP. Vedi `notes/sessione6_import.md` per dettaglio |
 | 2026-05-28 / 2026-06-05 | Settima sessione: debug Modbus selezionatrice — identificato bug ENABLE invertito su registro 12328, fix applicato su .33 e .34 via Online Change, coordinamento con Daniele per aggiornamento criterio gestionale. Tutte e 4 le macchine ora visibili. Vedi `notes/sessione7_modbus_fix.md` |
+| 2026-06-08 | Ottava sessione: fix TeamViewer Beckhoff (gateway rete), fix [39] su .31/.32, diagnosi dati gestionale (overflow PESO_TOTALE, pressioni = 0 hardware, CARICO_MIN Daniele sbagliato), sviluppo Modbus v5.0: nuovi registri SPEED/LINEE/ETH/NIR, fix DWORD PESO_TOTALE, comandi scrittura ABIL_NIR + reset contatori. Vedi `notes/sessione8_modbus_v5.md` |
