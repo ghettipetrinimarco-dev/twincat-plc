@@ -1,0 +1,6 @@
+# AI documentation pointer
+
+La documentazione Obsidian di questo progetto non vive nella cartella codice.
+Leggi la nota centrale: `03_Projects/twincat.md`
+
+Regola: non creare indici Markdown sparsi qui dentro; aggiorna la nota centrale nel Second Brain.
