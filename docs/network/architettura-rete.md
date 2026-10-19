@@ -44,7 +44,7 @@ Configurazione ripristinata sul panel .34 (hostname HMISEMP):
 | Scheda Windows | Configurazione | Collegata a |
 |---|---|---|
 | NIR (nome fuorviante) | Statico `192.168.11.34` + `192.168.1.34` /24, GW `192.168.11.1`, DNS `85.159.176.161/.162` | Rete aziendale (switch) |
-| LAN 4 | Statico `192.168.0.1` /24, nessun gateway | PC NIR `192.168.0.10` (cavo diretto, hostname SYS1570411) |
+| LAN 4 | Statico `192.168.0.1` /24, nessun gateway | PC NIR `192.168.0.10` (cavo diretto, hostname SYS1570411, MAC d0-4c-c1-09-08-c9). Verificato con arp -a. Il PC NIR non risponde al ping (firewall) |
 | LAN 3 | DHCP (169.254) | Sconosciuto, 100 Mbit, nessun traffico |
 | Twincat | DHCP (169.254) | Moduli I/O, non toccare |
 
