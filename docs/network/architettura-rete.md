@@ -35,3 +35,21 @@ Passando da DHCP a IP statico, Windows classifica la connessione come "Rete non 
 - La rete è isolata ma con accesso internet per la teleassistenza.
 
 <!-- TODO: confermare se la rete 192.168.1.x è condivisa con uffici/PC aziendali (impatta sul rischio sicurezza del firewall disattivato) -->
+
+## Intervento 2026-10-19 - Cambio rete aziendale su .34 (Elmak R4)
+Un elettricista ha introdotto un nuovo router `192.168.11.1` (rete `192.168.11.0/24`) e ha messo le schede del panel .34 in DHCP. Effetto: NIR fermo (Hz=0), programma bloccato su "Inizializzazione sistema in corso".
+
+Configurazione ripristinata sul panel .34 (hostname HMISEMP):
+
+| Scheda Windows | Configurazione | Collegata a |
+|---|---|---|
+| NIR (nome fuorviante) | Statico `192.168.11.34` + `192.168.1.34` /24, GW `192.168.11.1`, DNS `85.159.176.161/.162` | Rete aziendale (switch) |
+| LAN 4 | Statico `192.168.0.1` /24, nessun gateway | PC NIR `192.168.0.10` (cavo diretto, hostname SYS1570411) |
+| LAN 3 | DHCP (169.254) | Sconosciuto, 100 Mbit, nessun traffico |
+| Twincat | DHCP (169.254) | Moduli I/O, non toccare |
+
+Note:
+- `.31`, `.32`, `.33` e `.4` sono ancora su `192.168.1.x`: il secondo IP `192.168.1.34` mantiene la comunicazione con loro e con lo SCADA.
+- Quando migreranno anche le altre macchine a `11.x`, va aggiornato lo SCADA (Daniele) e serve l'IP fisso `192.168.0.1` sulla scheda verso il PC NIR.
+- TwinCAT apre la UDP verso il NIR solo all'avvio: dopo modifiche di rete riavviare il panel.
+- Chiedere all'elettricista di escludere `.34` dal DHCP del nuovo router.
