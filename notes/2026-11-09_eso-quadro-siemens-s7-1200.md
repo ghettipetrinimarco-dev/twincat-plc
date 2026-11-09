@@ -44,6 +44,21 @@ Ricambio CPU proposto: 6ES7214-1BG40-0XB0 (1214C AC/DC/RLY, FW V4). Evitare la n
 - Compilazione PLC_2 (versione 2016) in V12: 0 errori, 2 avvisi (PID_Compact versione obsoleta). Blocchi: Main OB1, Comando_inv FC1, Auto_start FC3, Allarmi FC4, Autostop FC5.
 - Da ricordare in conversione: aggiornare PID_Compact e ricontrollarne i parametri.
 
+## Confronto versioni PLC_2 (2015 V12 vs 2016 V10.5), memoria di lavoro in byte
+| Blocco | 2015 | 2016 |
+|---|---|---|
+| Main OB1 | 1185 | 1185 |
+| Comando_inv FC1 | 1341 | 1341 |
+| Manuale FC2 | 470 | 453 (cambiato) |
+| Auto_start FC3 | 568 | 568 |
+| Allarmi FC4 | 370 | 373 (cambiato) |
+| Autostop FC5 | 154 | 154 |
+| USS_PORT FC1070, USS_DRV FB1071, PID_Compact FB1130, DB | uguali | uguali |
+- Totali: 2015 load 228419 / work 11221; 2016 load 227895 / work 11207. Piccole differenze di load memory su altri blocchi (probabili commenti).
+- Inverter comandati via protocollo USS su CM 1241 RS485 (USS_PORT/USS_DRV).
+- Upgrade path (Siemens): da V14 in su si aprono solo progetti >= V13 SP1; Project Upgrader (richiede V17+) aggiorna progetti >= V13 SP1.
+- Piano consigliato: convertire con TIA recente la V13 SP1 (2015) e riportare a mano le modifiche di FC2 e FC4 dalla versione 2016.
+
 ## Touch
 - Il quadro PLC non ha un touch proprio. Il touch e' un progetto WinCC flexible separato (`touch/Smistamento plastia new.Pannello operatore_1`, ultima compilazione 26/08/2016), collegato via Ethernet.
 - IP presenti nel progetto: 192.168.0.2, 192.168.0.3, 192.168.0.4 (quale sia la CPU da verificare in TIA).
