@@ -66,6 +66,7 @@ Ricambio CPU proposto: 6ES7214-1BG40-0XB0 (1214C AC/DC/RLY, FW V4). Evitare la n
 - Dopo il riavvio il setup Basic si e' rifiutato: sul PC c'era GIA' installato TIA Portal V13 SP2 Upd2 (STEP 7 Professional, WinCC Professional, SINAMICS Startdrive). Setup annullato, nulla installato. I file di setup in `setup_V13SP2` non servono piu'.
 - Versione 2016 convertita in V13 SP1: `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1`, copia su condivisione `Interscambio/X MARCO/eso siemens da pc davide/conversione/controllo_plastica_2016_V13_SP1`.
 - Compilazione PLC_2 in V13: 2 errori (istruzioni USS_BASE e USS_DRV da aggiornare a versione piu' recente nella task card Istruzioni), 2 avvisi (PID_Compact obsoleto). Da sistemare nel TIA finale.
+- Causa errori USS: FC1 Comando_inv usa la libreria legacy "USS" (USS_PORT V1.0, USS_DRV V1.0, cartella USS V1.1) legata alla CPU FW V1.0. In V13 esiste anche "USS Communication" V2.3 (USS_Port_Scan/USS_Drive_Control) per CPU FW piu' recenti. Con la CPU 1BG40 FW V4 probabilmente le chiamate USS vanno sostituite con le nuove istruzioni e ricollegati i parametri (DA VERIFICARE nel TIA recente). Non corretto in V13: inutile sulla CPU vecchia.
 - Il catalogo V13 SP2 non contiene la CPU 1214C 1BG40 (solo 1BE30 e 1BG31): il cambio CPU va fatto con TIA V14 o successivo.
 - Prossimo passo (PC Win10): TIA recente in prova, aprire/aggiornare il progetto V13 SP1, sostituire CPU con 6ES7214-1BG40-0XB0, aggiornare USS_BASE/USS_DRV/PID_Compact, PUT/GET, IP 192.168.0.4, compilare.
 
