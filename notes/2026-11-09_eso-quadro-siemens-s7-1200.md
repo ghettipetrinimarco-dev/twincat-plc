@@ -34,6 +34,16 @@ Ricambio CPU proposto: 6ES7214-1BG40-0XB0 (1214C AC/DC/RLY, FW V4). Evitare la n
 - Il SM 1223 DC/DC del 2014 compare nelle versioni V12/V13 del progetto e non nella V10.5 originale: la versione attiva e' una delle due recenti. Da confermare in TIA che la configurazione hardware sia esattamente questa.
 - Inverter: 2 MICROMASTER 440 (destra) + 2 azionamenti a sinistra (51A01, 75A01) che sembrano SINAMICS G120: da verificare se sostituiti di recente e se il programma e' stato adattato.
 
+## Verifica in TIA Portal (sera 2026-11-09, via TeamViewer sul PC di Davide)
+- Sul PC di Davide c'e' solo TIA Portal V12 SP1 Update 4 (STEP 7 Professional + WinCC Basic). Niente V13: la conversione alla CPU 1BG40 va fatta con un TIA piu' recente su altro PC.
+- Il progetto contiene DUE PLC: PLC_1 e PLC_2, entrambi CPU 1214C AC/DC/RLY 1BE30 FW V1.0, collegati in rete (PN/IE_3).
+- PLC_2 = Quadro 2 Linea B. Rack: 101 CM 1241 RS485, 1 CPU + SB 1221 (3BD30), 2 SM 1223 DI16/DQ16 relay (1PL30), 3 SM 1231 AI4 (4HD30), 4 SM 1223 DI8/DQ8 (1BH30). Identico alle foto. IP 192.168.0.4 /24.
+- PLC_1 ha almeno 6 moduli (DI16, DI16/DQ, AI4, DQ16...): e' l'altro quadro.
+- Date file dati (PEData.plf): V12 SP1 22/10/2015, V13 SP1 06/11/2015, versione V10.5 originale 05/09/2016 11:52 (stessa ora del touch). Le date 2018/2019 sono solo un file da 4 byte. La versione da usare e' quindi `controllo_plastica` V10.5 del 05/09/2016.
+- Copie di lavoro sul PC di Davide in `C:\LAVORO_ESO\` (originali intatti). La V10.5 aggiornata a V12 e salvata in `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4`.
+- Compilazione PLC_2 (versione 2016) in V12: 0 errori, 2 avvisi (PID_Compact versione obsoleta). Blocchi: Main OB1, Comando_inv FC1, Auto_start FC3, Allarmi FC4, Autostop FC5.
+- Da ricordare in conversione: aggiornare PID_Compact e ricontrollarne i parametri.
+
 ## Touch
 - Il quadro PLC non ha un touch proprio. Il touch e' un progetto WinCC flexible separato (`touch/Smistamento plastia new.Pannello operatore_1`, ultima compilazione 26/08/2016), collegato via Ethernet.
 - IP presenti nel progetto: 192.168.0.2, 192.168.0.3, 192.168.0.4 (quale sia la CPU da verificare in TIA).
