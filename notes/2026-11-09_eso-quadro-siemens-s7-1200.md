@@ -63,8 +63,11 @@ Ricambio CPU proposto: 6ES7214-1BG40-0XB0 (1214C AC/DC/RLY, FW V4). Evitare la n
 - Scaricato STEP 7 Basic V13 SP2 Upd4 TRIAL (Siemens ID 109745155) con account Marco: 12 file, MD5 verificati.
 - File in `C:\LAVORO_ESO\setup_V13SP2`, estratti in `C:\LAVORO_ESO\setup_V13SP2\estratto`.
 - PC Davide: Win7 Pro 32 bit SP1, KB3033929 non risulta installato.
-- Il setup ha chiesto il riavvio: riavviato via TeamViewer alle 22:25. Installazione NON ancora fatta.
-- Prossimo passo: rilanciare setup da `estratto`, installare, convertire `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4` in V13 SP2, compilare.
+- Dopo il riavvio il setup Basic si e' rifiutato: sul PC c'era GIA' installato TIA Portal V13 SP2 Upd2 (STEP 7 Professional, WinCC Professional, SINAMICS Startdrive). Setup annullato, nulla installato. I file di setup in `setup_V13SP2` non servono piu'.
+- Versione 2016 convertita in V13 SP1: `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1`, copia su condivisione `Interscambio/X MARCO/eso siemens da pc davide/conversione/controllo_plastica_2016_V13_SP1`.
+- Compilazione PLC_2 in V13: 2 errori (istruzioni USS_BASE e USS_DRV da aggiornare a versione piu' recente nella task card Istruzioni), 2 avvisi (PID_Compact obsoleto). Da sistemare nel TIA finale.
+- Il catalogo V13 SP2 non contiene la CPU 1214C 1BG40 (solo 1BE30 e 1BG31): il cambio CPU va fatto con TIA V14 o successivo.
+- Prossimo passo (PC Win10): TIA recente in prova, aprire/aggiornare il progetto V13 SP1, sostituire CPU con 6ES7214-1BG40-0XB0, aggiornare USS_BASE/USS_DRV/PID_Compact, PUT/GET, IP 192.168.0.4, compilare.
 
 ## Touch
 - Il quadro PLC non ha un touch proprio. Il touch e' un progetto WinCC flexible separato (`touch/Smistamento plastia new.Pannello operatore_1`, ultima compilazione 26/08/2016), collegato via Ethernet.
