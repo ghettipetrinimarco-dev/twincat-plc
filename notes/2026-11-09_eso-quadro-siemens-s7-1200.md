@@ -59,6 +59,13 @@ Ricambio CPU proposto: 6ES7214-1BG40-0XB0 (1214C AC/DC/RLY, FW V4). Evitare la n
 - Upgrade path (Siemens): da V14 in su si aprono solo progetti >= V13 SP1; Project Upgrader (richiede V17+) aggiorna progetti >= V13 SP1.
 - Piano consigliato: convertire con TIA recente la V13 SP1 (2015) e riportare a mano le modifiche di FC2 e FC4 dalla versione 2016.
 
+## TIA V13 SP2 (sera 2026-11-09)
+- Scaricato STEP 7 Basic V13 SP2 Upd4 TRIAL (Siemens ID 109745155) con account Marco: 12 file, MD5 verificati.
+- File in `C:\LAVORO_ESO\setup_V13SP2`, estratti in `C:\LAVORO_ESO\setup_V13SP2\estratto`.
+- PC Davide: Win7 Pro 32 bit SP1, KB3033929 non risulta installato.
+- Il setup ha chiesto il riavvio: riavviato via TeamViewer alle 22:25. Installazione NON ancora fatta.
+- Prossimo passo: rilanciare setup da `estratto`, installare, convertire `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4` in V13 SP2, compilare.
+
 ## Touch
 - Il quadro PLC non ha un touch proprio. Il touch e' un progetto WinCC flexible separato (`touch/Smistamento plastia new.Pannello operatore_1`, ultima compilazione 26/08/2016), collegato via Ethernet.
 - IP presenti nel progetto: 192.168.0.2, 192.168.0.3, 192.168.0.4 (quale sia la CPU da verificare in TIA).
