@@ -92,6 +92,15 @@ Ricambio CPU proposto: 6ES7214-1BG40-0XB0 (1214C AC/DC/RLY, FW V4). Evitare la n
 - Il Dell vede il NAS come `\\NAS\Condivisione` dopo che Marco ha inserito le credenziali.
 - Desktop remoto da Mac: la digitazione diretta arriva come "aaaa"; funziona incollare (appunti scritti mentre un'altra app e' in primo piano, poi Ctrl+V nel Dell).
 
+## TIA V15.1 sul Dell (2026-11-10, pomeriggio)
+- Progetto aggiornato da V15.1: `C:\LAVORO_ESO\controllo_plastica_2016_V13_SP1_cambio_CPU_V15_1` (la cartella V13 resta invariata).
+- PLC_2: Sostituisci dispositivo da 1BG31 V3.0 a 6ES7214-1BG40-0XB0 V4.3 (massimo FW in V15.1). TIA: "accesso PUT/GET consentito per coerenza con S7-1200 V3.0"; non si torna a FW < V4. Progetto salvato.
+- Compilazione PLC_2: 3 errori, cioe' "L'elemento della biblioteca USS_BASE utilizzato e' errato" e lo stesso per USS_DRV. Avvisi 3 (PID_Compact da verificare).
+- FC1 Comando_inv (LAD): segmento 1 USS_PORT (PORT 16#000B, BAUD 19200, USS_DB "USS_DRV_DB" DB1, ERROR M2.0 "Erruss", STATUS MW6 "Stapot_1"); segmento 2 USS_DRV "Selezionatrice 1" con contatti su RUN/OFF2/OFF3/F_ACK/DIR e ~15 uscite; seguono altri segmenti per gli altri inverter (non ancora contati).
+- Le nuove istruzioni sono in Istruzioni > Comunicazione > Processore di comunicazione > USS Communication: USS_Port_Scan, USS_Drive_Control, USS_Read_Param, USS_Write_Param. Stessi nomi di parametro delle vecchie, ma non si possono scambiare: il nome della box non e' modificabile e il trascinamento via Desktop remoto non funziona. Vanno inserite nuove box e ricollegati a mano tutti gli operandi.
+- Da verificare: il PORT 16#000B era l'ID hardware del CM 1241 nella CPU vecchia; con FW V4 va preso l'ID hardware attuale della porta del CM (costanti di sistema).
+- Desktop remoto: con Connections > Keyboard Mode > Unicode la digitazione funziona.
+
 ## Touch
 - Il quadro PLC non ha un touch proprio. Il touch e' un progetto WinCC flexible separato (`touch/Smistamento plastia new.Pannello operatore_1`, ultima compilazione 26/08/2016), collegato via Ethernet.
 - IP presenti nel progetto: 192.168.0.2, 192.168.0.3, 192.168.0.4 (quale sia la CPU da verificare in TIA).
