@@ -151,6 +151,15 @@ Istanza DB1 del segmento 6 non letta (fuori schermo), probabile DB1 come gli alt
 4. Istanza unica DB6 per i 4 USS_Drive_Control e PORT = ID 269: corretto secondo la libreria, da confermare in campo con gli inverter.
 5. Vecchio DB1 "USS_DRV_DB": non controllato se e' rimasto nel progetto e se il touch lo legge.
 6. Firmware: progetto V4.3, CPU nuova probabilmente V4.6 o piu': il caricamento dovrebbe funzionare, da verificare.
+7. Diagnosi CPU non conclusiva: la prova al banco va ripetuta senza SB 1221 e senza memory card (dalla foto la SB era ancora montata). Se il guasto fosse nella SB, la CPU nuova con la SB vecchia farebbe lo stesso. Prima di ordinare: asciugatura 24-48 h in ambiente caldo e nuova prova.
+8. Memory card: se nella CPU vecchia c'e' una card, puo' contenere il programma realmente caricato. Va letta prima di dare per buona la versione 2016.
+9. Moduli in campo diversi dal progetto: in campo SM 1223 6ES7223-1PL32 e 6ES7223-1BH32, nel progetto 1PL30 e 1BH30. La CPU V1.0 li accettava; la V4 potrebbe segnalarli come diversi. Valutare di allineare la configurazione ai codici reali.
+10. Segmenti USS vecchi 7, 11 e 15 eliminati senza scorrerli fino in fondo: se contenevano altro oltre a USS_DRV, e' andato perso. Verifica: stampare in PDF FC1 dalla V13 (PC Davide) e dalla V15.1 e confrontarli segmento per segmento.
+11. Comunicazione PLC_1 <-> PLC_2 sulla rete PN/IE_3 non verificata (Vista di rete > Collegamenti e programma di PLC_1).
+12. Azionamenti a sinistra (51A01, 75A01) forse G120 sostituiti dopo il 2016: se il programma non era stato adattato, USS puo' non funzionare a prescindere dal lavoro fatto.
+13. In campo: collegare il Dell via cavo con IP 192.168.0.x (oggi e' su 192.168.1.x in Wi-Fi), caricare solo PLC_2 e mettere in RUN solo con la linea in sicurezza (Auto_start potrebbe avviare i nastri).
+14. Prima di montare la CPU nuova asciugare e ispezionare il quadro (morsetti, 24 V sensori), altrimenti si rischia di danneggiare anche quella.
+15. Licenza TIA V15.1 sul Dell non controllata.
 
 ## Touch
 - Il quadro PLC non ha un touch proprio. Il touch e' un progetto WinCC flexible separato (`touch/Smistamento plastia new.Pannello operatore_1`, ultima compilazione 26/08/2016), collegato via Ethernet.
