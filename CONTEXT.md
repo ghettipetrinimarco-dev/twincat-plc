@@ -235,6 +235,12 @@ Pacchetto dati: 121 byte (`RX_NUM_NIR=121` = 117 tracce + 5 header - 1)
 
 ---
 
+## Lavori collegati fuori TwinCAT
+
+- **ESO Recycling, Quadro 2 Linea B (ex Pianezze), PLC Siemens S7-1200 guasto** (dal 2026-11-09). Non e' TwinCAT: e' il quadro che comanda gli inverter della linea. Stato completo, percorsi dei file e prossimi passi in `notes/2026-11-09_eso-quadro-siemens-s7-1200.md`.
+
+---
+
 ## Stato Repository vs Macchine Reali
 
 | File | Fonte | Validità |
@@ -253,3 +259,4 @@ Pacchetto dati: 121 byte (`RX_NUM_NIR=121` = 117 tracce + 5 header - 1)
 | 2026-05-05 | Prima sessione: raccolta contesto, struttura repo, documentazione iniziale |
 | 2026-05-05 | Seconda sessione: acquisizione codice sorgente completo (4 POU + GVL), analisi architettura |
 | 2026-05-05 | Terza sessione: acquisizione TWINCAT_CONFIGURATION.EXP e TASK_CONFIGURATION.EXP, risoluzione DISTANZA (impulsi encoder, 524,8mm fisici) |
+| 2026-11-09 | ESO Quadro 2 Linea B (Siemens S7-1200): trovato progetto TIA sul PC Davide, convertito in V13 SP1, vedi `notes/2026-11-09_eso-quadro-siemens-s7-1200.md` |
