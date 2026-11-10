@@ -144,6 +144,14 @@ USS_DRV -> USS_Drive_Control, istanza DB1 "USS_DRV_DB" per tutti. RUN contatto N
 
 Istanza DB1 del segmento 6 non letta (fuori schermo), probabile DB1 come gli altri. Nota: PZD_LEN 6 sui primi due, 4 sugli altri due (coerente con MM440 + G120?, da verificare).
 
+## Punti dubbi da verificare (lavoro del 2026-11-10)
+1. Impostazioni CPU dopo i due cambi dispositivo (V1.0 -> V3.0 -> V4.3) non ricontrollate: avviamento dopo rete ON, merker di clock e di sistema, tempo di ciclo, HSC e generatori di impulsi. Confrontarle con il progetto V13 originale.
+2. Touch WinCC flexible con CPU FW V4: da verificare che la versione di WinCC flexible usata supporti la S7-1200 V4 e che i DB letti dal touch siano ad accesso standard (non ottimizzato).
+3. USS_Port_Scan viene richiamata da OB1 (FC1), come la vecchia USS_PORT. Siemens consiglia un OB ciclico a tempo fisso: se il ciclo e' lungo la comunicazione puo' dare errori. Invariato rispetto all'originale, ma da tenere d'occhio.
+4. Istanza unica DB6 per i 4 USS_Drive_Control e PORT = ID 269: corretto secondo la libreria, da confermare in campo con gli inverter.
+5. Vecchio DB1 "USS_DRV_DB": non controllato se e' rimasto nel progetto e se il touch lo legge.
+6. Firmware: progetto V4.3, CPU nuova probabilmente V4.6 o piu': il caricamento dovrebbe funzionare, da verificare.
+
 ## Touch
 - Il quadro PLC non ha un touch proprio. Il touch e' un progetto WinCC flexible separato (`touch/Smistamento plastia new.Pannello operatore_1`, ultima compilazione 26/08/2016), collegato via Ethernet.
 - IP presenti nel progetto: 192.168.0.2, 192.168.0.3, 192.168.0.4 (quale sia la CPU da verificare in TIA).

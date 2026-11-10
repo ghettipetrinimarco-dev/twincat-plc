@@ -20,6 +20,9 @@ Prima di tutto leggi, nel progetto `plc-twincat`, branch `claude/eso-siemens-s7-
 4. Aggiornare la nota, commit e push sul branch. Merge su main solo quando lo dice Marco.
 5. In campo (dopo arrivo CPU nuova): caricare solo su PLC_2, verificare comunicazione USS con i 4 inverter e il touch.
 
+## Punti dubbi
+Vedi la sezione "Punti dubbi da verificare" nella nota: impostazioni CPU dopo il cambio, touch WinCC flexible con FW V4, USS richiamata da OB1, DB6/ID 269, vecchio DB1, firmware.
+
 ## Note pratiche sul controllo remoto (Mac -> Dell)
 - Connessione: Windows App (Desktop remoto) verso 192.168.1.9, utente `.\Bmcr`. TeamViewer sul Dell si blocca all'avvio.
 - Serve il controllo schermo completo (lo approva Marco); in background i clic non arrivano.
