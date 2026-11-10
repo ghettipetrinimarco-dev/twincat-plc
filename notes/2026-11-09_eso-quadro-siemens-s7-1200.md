@@ -101,6 +101,40 @@ Ricambio CPU proposto: 6ES7214-1BG40-0XB0 (1214C AC/DC/RLY, FW V4). Evitare la n
 - Da verificare: il PORT 16#000B era l'ID hardware del CM 1241 nella CPU vecchia; con FW V4 va preso l'ID hardware attuale della porta del CM (costanti di sistema).
 - Desktop remoto: con Connections > Keyboard Mode > Unicode la digitazione funziona.
 
+### Operandi USS in FC1 Comando_inv (letti in TIA V15.1, indirizzi assoluti)
+FC1 ha 17 segmenti. USS solo nei segmenti 1, 2, 6, 10, 14; gli altri sono DIV/CONV/MUL per Hz e corrente e stato marcia indietro.
+
+Segmento 1, USS_PORT -> USS_Port_Scan: PORT 16#000B, BAUD 19200, USS_DB DB1 "USS_DRV_DB", ERROR M2.0, STATUS MW6.
+
+USS_DRV -> USS_Drive_Control, istanza DB1 "USS_DRV_DB" per tutti. RUN contatto NA, OFF2 e OFF3 contatto NC sullo stesso bit, F_ACK contatto NA M200.0, DIR contatto NA. CTRL3..CTRL8 = 16#0 in tutti.
+
+| Parametro | Seg 2 Selezionatrice 1 | Seg 6 Nastro uscita 1 | Seg 10 Nastro metal detector | Seg 14 Vibro nastro rulli |
+|---|---|---|---|---|
+| RUN (NA) | M100.0 | M120.0 | M140.0 | M160.0 |
+| OFF2 / OFF3 (NC) | M100.1 | M120.1 | M140.1 | M160.1 |
+| F_ACK (NA) | M200.0 | M200.0 | M200.0 | M200.0 |
+| DIR (NA) | M100.2 | M120.2 | M140.2 | M160.2 |
+| DRIVE | 1 | 2 | 3 | 4 |
+| PZD_LEN | 6 | 6 | 4 | 4 |
+| SPEED_SP | DB5.DBD0 | DB5.DBD4 | DB5.DBD12 | DB5.DBD16 |
+| NDR | M100.3 | M120.3 | M140.3 | M160.3 |
+| ERROR | M100.4 | M120.4 | M140.4 | M160.4 |
+| STATUS | MW106 | MW126 | MW146 | MW166 |
+| RUN_EN | M100.7 | M120.7 | M140.7 | M160.7 |
+| D_DIR | M114.0 | M114.1 | M114.2 | M114.3 |
+| INHIBIT | M100.5 | M120.5 | M140.5 | M160.5 |
+| FAULT | M100.6 | M120.6 | M140.6 | M160.6 |
+| SPEED | MD108 | MD128 | MD148 | MD168 |
+| STATUS1 | DB22.DBW0 | DB22.DBW16 | DB22.DBW32 | DB22.DBW48 |
+| STATUS3 | DB22.DBW4 | DB22.DBW20 | DB22.DBW36 | DB22.DBW52 |
+| STATUS4 | DB22.DBW6 | DB22.DBW22 | DB22.DBW38 | DB22.DBW54 |
+| STATUS5 | DB22.DBW8 | DB22.DBW24 | DB22.DBW40 | DB22.DBW56 |
+| STATUS6 | DB22.DBW10 | DB22.DBW26 | DB22.DBW42 | DB22.DBW58 |
+| STATUS7 | DB22.DBW12 | DB22.DBW28 | DB22.DBW44 | DB22.DBW60 |
+| STATUS8 | DB22.DBW14 | DB22.DBW30 | DB22.DBW46 | DB22.DBW62 |
+
+Istanza DB1 del segmento 6 non letta (fuori schermo), probabile DB1 come gli altri. Nota: PZD_LEN 6 sui primi due, 4 sugli altri due (coerente con MM440 + G120?, da verificare).
+
 ## Touch
 - Il quadro PLC non ha un touch proprio. Il touch e' un progetto WinCC flexible separato (`touch/Smistamento plastia new.Pannello operatore_1`, ultima compilazione 26/08/2016), collegato via Ethernet.
 - IP presenti nel progetto: 192.168.0.2, 192.168.0.3, 192.168.0.4 (quale sia la CPU da verificare in TIA).
