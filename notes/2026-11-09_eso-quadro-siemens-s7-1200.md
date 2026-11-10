@@ -70,6 +70,28 @@ Ricambio CPU proposto: 6ES7214-1BG40-0XB0 (1214C AC/DC/RLY, FW V4). Evitare la n
 - Il catalogo V13 SP2 non contiene la CPU 1214C 1BG40 (solo 1BE30 e 1BG31): il cambio CPU va fatto con TIA V14 o successivo.
 - Prossimo passo (PC Win10): TIA recente in prova, aprire/aggiornare il progetto V13 SP1, sostituire CPU con 6ES7214-1BG40-0XB0, aggiornare USS_BASE/USS_DRV/PID_Compact, PUT/GET, IP 192.168.0.4, compilare.
 
+## Video LED in azienda (2026-11-10, quadro ancora cablato)
+- Ciclo continuo di circa 1-1,5 s: si accendono TUTTI insieme (RUN/STOP, ERROR, MAINT, tutti i LED DI della CPU e della SB, DIAG di CM 1241 e moduli), poi tutto spento, poi di nuovo.
+- Tutti i LED accesi insieme = test LED dell'avvio: la CPU non supera l'avvio e si riavvia. Coerente con alimentazione interna che cade (corto o assorbimento eccessivo sul 24 V uscita sensori o sul bus dei moduli, probabile umidita' da schiuma) oppure con CPU guasta. Da distinguere con la prova a sola CPU.
+- CPU smontata dal quadro e portata al banco (MAC 00-1C-06-08-A9-AF, 214-1BE30-0XB0, SB 1221 ancora montata).
+- Trovato in azienda un portatile Dell Win10 con TIA Portal V15 e V15.1, PLCSIM V15.1, TIA Updater, Automation License Manager (probabile lavoro di Davide). Si prova prima con V15.1 invece di installare un TIA in prova: apre progetti da V13 SP1 e ha la 1214C 1BG40 FW V4.x.
+
+## Invio a Picchio srl (2026-11-10, richiesta di Gabriele Canestrini)
+- Picchio vuole verificare che il loro TIA apra il programma e che non ci siano password.
+- Pacchetto in `Interscambio/X MARCO/eso siemens da pc davide/invio_picchio_2026-11-10`: zip del progetto V13 SP1 (versione 2016, 5 MB, senza `tmp`), schema `Schema elettrico/Quadro_2.pdf` (2012) e `quadro_2.pdf` (scansione con correzioni, 2013).
+- Bozza Gmail (account marco.bmcr) a sw@picchiosrl.com; allegati da aggiungere a mano e invio fatto da Marco.
+- NAS sul Mac: `smb://AMMINISTRATORE@192.168.1.6/Condivisione`, montato come `/Volumes/Condivisione`.
+- PC di lavoro: portatile Dell Win10 "Bmcr", Wi-Fi 192.168.1.9, raggiunto con Desktop remoto (TeamViewer bloccato all'avvio).
+
+## Conversione verso TIA V15.1 (2026-11-10)
+- TIA V15.1 sul Dell rifiuta il progetto: "Le CPU S7-1200 con firmware V1.0 non vengono piu' supportate". Riguarda PLC_1 e PLC_2.
+- Passaggio intermedio in TIA V13 SP2 sul PC Davide, su nuova copia `C:\LAVORO_ESO\controllo_plastica_2016_V13_SP1_cambio_CPU` (Salva con nome dalla conversione del 09/11, che resta intatta).
+- Sostituisci dispositivo: PLC_2 e PLC_1 da 6ES7214-1BE30-0XB0 V1.0 a 6ES7214-1BG31-0XB0 V3.0 (unica alternativa nel catalogo V13 insieme alla 1BE30). Compatibilita': solo creazione dei generatori di impulsi PTO/PWM aggiuntivi. TIA ha riaperto Comando_inv per modifica della libreria.
+- ATTENZIONE: PLC_1 e' stato cambiato solo per poter aprire il progetto in V15.1. Questo progetto NON va caricato su PLC_1 (l'altro quadro funziona con la CPU originale).
+- Copia sul NAS: `conversione/controllo_plastica_2016_V13_SP1_cambio_CPU` (19 file, 13,96 MB). Copia locale sul Dell in `C:\LAVORO_ESO\`.
+- Il Dell vede il NAS come `\\NAS\Condivisione` dopo che Marco ha inserito le credenziali.
+- Desktop remoto da Mac: la digitazione diretta arriva come "aaaa"; funziona incollare (appunti scritti mentre un'altra app e' in primo piano, poi Ctrl+V nel Dell).
+
 ## Touch
 - Il quadro PLC non ha un touch proprio. Il touch e' un progetto WinCC flexible separato (`touch/Smistamento plastia new.Pannello operatore_1`, ultima compilazione 26/08/2016), collegato via Ethernet.
 - IP presenti nel progetto: 192.168.0.2, 192.168.0.3, 192.168.0.4 (quale sia la CPU da verificare in TIA).
