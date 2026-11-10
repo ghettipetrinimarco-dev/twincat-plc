@@ -6,7 +6,7 @@ Prima di tutto leggi, nel progetto `plc-twincat`, branch `claude/eso-siemens-s7-
 
 ## Dove siamo (sera 2026-11-10)
 - CPU guasta: S7-1200 1214C AC/DC/RLY 6ES7214-1BE30-0XB0 FW V1.0 (PLC_2 nel progetto TIA "controllo_plastica", versione del 05/09/2016). Al banco, da sola, si riavvia in loop (tutti i LED accesi e spenti insieme).
-- Progetto aperto in TIA Portal V15.1 sul portatile Dell Win10 "Bmcr" (Wi-Fi 192.168.1.9): `C:\LAVORO_ESO\controllo_plastica_2016_V13_SP1_cambio_CPU_V15_1`.
+- Progetto aperto in TIA Portal V15.1 sul portatile Dell Win10 "Bmcr" (Wi-Fi 192.168.1.9): `C:\LAVORO_ESO\controllo_plastica_2016_V13_SP1_cambio_CPU_V15.1`.
 - Percorso fatto: V13 SP1 (PC Davide) -> cambio CPU intermedio a 1BG31 V3.0 su PLC_1 e PLC_2 (V15.1 non apre CPU FW V1.0) -> upgrade a V15.1 sul Dell -> PLC_2 sostituita con 6ES7214-1BG40-0XB0 FW V4.3.
 - ATTENZIONE: PLC_1 (l'altro quadro, funzionante) e' stato cambiato a 1BG31 solo per aprire il progetto. Questo progetto NON va mai caricato su PLC_1.
 - FC1 Comando_inv: USS_PORT/USS_DRV sostituite con USS_Port_Scan (DB4, PORT "Local~RS485_1" = ID 269, 19200 baud) e 4 USS_Drive_Control (istanza unica DB6). Operandi identici agli originali. FC1 compila 0 errori.

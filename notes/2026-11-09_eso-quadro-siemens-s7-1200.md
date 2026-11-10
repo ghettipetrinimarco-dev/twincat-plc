@@ -93,7 +93,7 @@ Ricambio CPU proposto: 6ES7214-1BG40-0XB0 (1214C AC/DC/RLY, FW V4). Evitare la n
 - Desktop remoto da Mac: la digitazione diretta arriva come "aaaa"; funziona incollare (appunti scritti mentre un'altra app e' in primo piano, poi Ctrl+V nel Dell).
 
 ## TIA V15.1 sul Dell (2026-11-10, pomeriggio)
-- Progetto aggiornato da V15.1: `C:\LAVORO_ESO\controllo_plastica_2016_V13_SP1_cambio_CPU_V15_1` (la cartella V13 resta invariata).
+- Progetto aggiornato da V15.1: `C:\LAVORO_ESO\controllo_plastica_2016_V13_SP1_cambio_CPU_V15.1` (la cartella V13 resta invariata).
 - PLC_2: Sostituisci dispositivo da 1BG31 V3.0 a 6ES7214-1BG40-0XB0 V4.3 (massimo FW in V15.1). TIA: "accesso PUT/GET consentito per coerenza con S7-1200 V3.0"; non si torna a FW < V4. Progetto salvato.
 - Compilazione PLC_2: 3 errori, cioe' "L'elemento della biblioteca USS_BASE utilizzato e' errato" e lo stesso per USS_DRV. Avvisi 3 (PID_Compact da verificare).
 - FC1 Comando_inv (LAD): segmento 1 USS_PORT (PORT 16#000B, BAUD 19200, USS_DB "USS_DRV_DB" DB1, ERROR M2.0 "Erruss", STATUS MW6 "Stapot_1"); segmento 2 USS_DRV "Selezionatrice 1" con contatti su RUN/OFF2/OFF3/F_ACK/DIR e ~15 uscite; seguono altri segmenti per gli altri inverter (non ancora contati).
