@@ -133,6 +133,15 @@ USS_DRV -> USS_Drive_Control, istanza DB1 "USS_DRV_DB" per tutti. RUN contatto N
 | STATUS7 | DB22.DBW12 | DB22.DBW28 | DB22.DBW44 | DB22.DBW60 |
 | STATUS8 | DB22.DBW14 | DB22.DBW30 | DB22.DBW46 | DB22.DBW62 |
 
+### Sostituzione USS fatta (2026-11-10, TIA V15.1 sul Dell)
+- Segmento 1: USS_Port_Scan, istanza DB4 "USS_Port_Scan_DB". PORT = "Local~RS485_1" (ID hardware 269: il vecchio 16#000B non vale piu' con la CPU V4), BAUD 19200, USS_DB = "USS_Drive_Control_DB".USS_DB, ERROR M2.0, STATUS MW6.
+- Segmenti 2, 6, 10, 14: USS_Drive_Control, una sola istanza DB6 "USS_Drive_Control_DB" per tutti e 4 (come nel vecchio con DB1). Operandi identici alla tabella sopra, contatti NC su OFF2/OFF3 ricreati, CTRL3..8 = 16#0. Vecchie USS_PORT/USS_DRV e segmenti vecchi eliminati.
+- Metodo: segmento 2 rifatto a mano, poi copiato e incollato e rinominato con Trova/Sostituisci limitato al segmento (inv1 -> inv2/inv3/inv4: i simboli hanno il numero dell'inverter e puntano agli indirizzi giusti). DRIVE e PZD_LEN corretti a mano. Ogni segmento ricontrollato a vista contro la tabella.
+- Compilazione FC1: 0 errori, 0 avvisi. Hardware PLC_2 (completa): 0 errori, 2 avvisi normali (nessun livello di protezione; I32.0 della SB usato come HSC).
+- Verificato in proprieta' CPU: IP 192.168.0.4 / 255.255.255.0, PN/IE_3, nessun router; PUT/GET attivo.
+- Software PLC_2 (completa): 1 errore, oggetto tecnologico "Livello_nastro" [DB44] PID_Compact V1.0 non presente in biblioteca. Riferimenti incrociati: nessun punto di utilizzo, e non c'e' nessun OB a interrupt ciclico; il PID non e' richiamato dal programma. Decisione su cosa farne in sospeso (Marco).
+- Da verificare in campo: ID hardware 269 e funzionamento USS su inverter reali; il touch WinCC flexible potrebbe leggere DB44 (da controllare prima di toccarlo).
+
 Istanza DB1 del segmento 6 non letta (fuori schermo), probabile DB1 come gli altri. Nota: PZD_LEN 6 sui primi due, 4 sugli altri due (coerente con MM440 + G120?, da verificare).
 
 ## Touch
