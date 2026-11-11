@@ -54,16 +54,17 @@ Note:
 - TwinCAT apre la UDP verso il NIR solo all'avvio: dopo modifiche di rete riavviare il panel.
 - Chiedere all'elettricista di escludere `.34` dal DHCP del nuovo router.
 
-## Intervento 2026-11-11 - Doppio IP su .31 e .33
+## Intervento 2026-11-11 - Doppio IP su .31, .32 e .33
 Stessa soluzione del .34: IP nuovo come principale con gateway `192.168.11.1`, IP vecchio `192.168.1.x` mantenuto come secondario sulla stessa scheda. DNS invariati. Applicato via `netsh` da cmd amministratore (le finestre IPv4 sul .34 non salvavano).
 
 | Macchina | Scheda modificata | IP | Schede non toccate |
 |---|---|---|---|
 | .31 Beckhoff lavatrici (CP-9960F8) | Local Area Connection (USB ASIX) | `192.168.11.31` + `192.168.1.31` | Plc (EtherCAT, DHCP), Nir `192.168.0.1` |
+| .32 Beckhoff R4 (CP-950F20) | Internet (USB ASIX) | `192.168.11.32` + `192.168.1.32` | Plc (EtherCAT, DHCP), Nir `192.168.0.1` |
 | .33 Elmak lavatrici (HMIsemp) | Connessione alla rete locale (LAN) 4 | `192.168.11.33` + `192.168.1.33` | LAN 2 `192.168.0.1` (NIR), Twincat `192.168.137.1`, LAN (inutilizzata) |
 
 Comando tipo:
 `netsh interface ip set address "<scheda>" static 192.168.11.3x 255.255.255.0 192.168.11.1 & netsh interface ip add address "<scheda>" 192.168.1.3x 255.255.255.0`
 Rollback: `netsh interface ip set address "<scheda>" static 192.168.1.3x 255.255.255.0 192.168.1.1`
 
-Verificati ping verso `192.168.11.1` e `192.168.1.34`. La .31 e' raggiungibile con TeamViewer diretto. Da confermare: spia NIR, SCADA (Daniele). Note: .33 ha l'orologio indietro (05/11 invece di 11/11); .33 e .34 hanno lo stesso hostname HMIsemp. Resta da fare: .32.
+Verificati ping verso `192.168.11.1` e `192.168.1.34`. La .31 e' raggiungibile con TeamViewer diretto. Da confermare: spia NIR, SCADA (Daniele). Note: .33 ha l'orologio indietro (05/11 invece di 11/11); .33 e .34 hanno lo stesso hostname HMIsemp. Tutte e 4 le macchine ora sono su entrambe le reti.
