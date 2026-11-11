@@ -207,3 +207,8 @@ Nessuna modifica al progetto TIA. Fatta la copia di sicurezza e le verifiche pos
 - La stampa in PDF da TIA V15.1 di tutto PLC_2 o di tutti i blocchi non finisce in tempi utili (annullata dopo 15 minuti, file a 0 byte). Per il confronto conviene leggere a video (zoom editor 50%, tasto PagGiu) o stampare un blocco alla volta.
 - In TIA la rotella sopra un campo a tendina delle proprieta' lo mette a fuoco: non scorrere con la rotella nelle pagine delle proprieta', usare le voci dell'albero.
 - Windows App ha due connessioni salvate: "pc dell win10" e "davide pc" (senza credenziali salvate).
+
+### Aggiornamento 2026-11-11 pomeriggio
+- Punto 5 chiuso: nel file del progetto V13 sul NAS (blocchi interni decompressi dal Mac) esistono sia la costante 0,00096125 sia 0,00045. La costante diversa del segmento 9 e' quindi dell'originale, non un errore della conversione.
+- Confronto V13 a video non fatto: il PC di Davide e' collegato via TeamViewer (non Windows App), ma lo strumento di controllo del Mac ha rifiutato tutti i clic ("Could not verify which document this window is editing") su Windows App e TeamViewer, anche dopo aver rilasciato e ripreso il controllo. L'immagine TeamViewer sembrava ferma (orologio remoto fisso alle 13:53).
+- Leggere FC1 dal file V13 senza TIA non e' pratico: i segmenti sono salvati con riferimenti numerici agli operandi, non con gli indirizzi.
