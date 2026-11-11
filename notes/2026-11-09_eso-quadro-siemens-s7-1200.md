@@ -173,3 +173,37 @@ Istanza DB1 del segmento 6 non letta (fuori schermo), probabile DB1 come gli alt
 3. Ordinare CPU 6ES7214-1BG40-0XB0.
 4. Aprire `controllo_plastica_V13_SP1` con TIA Portal recente (Win10/11), cambio dispositivo CPU, compilare, caricare. Da verificare se serve un passaggio di versione intermedio.
 5. Prova in campo: comunicazione inverter via CM 1241 e collegamento HMI.
+
+## Revisione critica (2026-11-11, nuova sessione, solo lettura)
+Nessuna modifica al progetto TIA. Fatta la copia di sicurezza e le verifiche possibili senza il PC di Davide.
+
+### Copia di sicurezza
+- Progetto chiuso in TIA (era gia' salvato) e copiato con robocopy in `conversione/controllo_plastica_2016_V13_SP1_cambio_CPU_V15.1` sul NAS: 47 file, 16 cartelle, 5,93 MB, 0 non riusciti. Conteggio ricontrollato dal Mac. Progetto poi riaperto.
+
+### Verificato in TIA V15.1 (PLC_2)
+- FC1 Comando_inv: 17 segmenti. USS nei segmenti 1, 2, 6, 10, 14; operandi dei 4 USS_Drive_Control letti a video e uguali alla tabella sopra (DRIVE 1-4, PZD_LEN 6/6/4/4, istanza unica DB6, OFF2/OFF3 con contatto NC). Segmento 1 come descritto (DB4, PORT 269, 19200, USS_DB di DB6).
+- Punto dubbio 10 ridimensionato: i segmenti 7, 11, 15 attuali sono "Velocita' in Hz" (DIV) e la struttura e' completa: per ogni inverter USS + Hz + corrente + marcia indietro (5 + 12 = 17). Non manca nessun segmento. Resta da fare il confronto operando per operando con la V13.
+- Punto dubbio 5 risolto: il vecchio DB1 "USS_DRV_DB" non e' piu' nel progetto. DB presenti: DB5 Velinrit, DB22 Outinv, DB4 e DB6 (USS), DB2 t1, DB3 C1, DB20/21/23/24/49 IEC_Timer_0/1/2/3/5, piu' i timer T_lav*, T_pausa*, t_start, Tfotsel1, Trot2 (numeri non letti), DB44 Livello_nastro. Cartelle `blocchidb` e `Contatori` vuote.
+- Impostazioni CPU lette: avviamento a caldo "modo di funzionamento prima di RETE OFF"; "avvio della CPU anche in caso di divergenza"; tempo di parametrizzazione 60000 ms; controllo ciclo 150 ms, nessun ciclo minimo; merker di clock attivo su MB0, merker di sistema non attivo; accesso completo senza protezione; PUT/GET attivo.
+- HSC1 attivo: frequenza, monofase, periodo 1,0 s, ingresso clock I32.0 (signal board), indirizzo ID1000. HSC2 non attivo. HSC3-6 e generatori di impulsi non aperti.
+- Indirizzi I/O: CPU IB0-1 / QB0-1, AI CPU IW64-67, SB IB32, posto 2 (DI16/DO16) IB4-5 / QB2-3, posto 3 (AI4) IW112-119, posto 4 (DI8/DO8) IB6 / QB4.
+- Rete: PLC_1 e PLC_2 sulla stessa sottorete PN/IE_3. In PLC_2 non ci sono blocchi di comunicazione verso altri PLC (solo Port_Config, Send/Receive_P2P, Send/Receive_Config per USS): PLC_2 non apre collegamenti verso PLC_1. Tabella collegamenti e programma di PLC_1 non guardati.
+
+### Verificato dal Mac sui file del NAS
+- Touch (`touch/Smistamento plastia new.hmi`, 2016): pannello MP277 10", driver "SIMATIC S7 300/400". Indirizzi usati: M, I, Q, DB5 (44 tag), DB22.DBW100 e DBW102, DB49.DBD18 (tipo Time), DB1.DBW0 (3 tag). Nessun tag su DB44.
+  - DB1.DBW0 e' l'indirizzo predefinito dei tag nuovi in WinCC flexible: probabilmente 3 tag mai configurati (interpretazione, da confermare aprendo il progetto touch).
+  - DB49 = IEC_Timer_5: il touch legge o scrive un tempo dentro il DB di un temporizzatore.
+- `Parametrizzazione inverter/Parametri inverter M440 USS.txt` (2012): P2010=7 (19200 baud, coerente con BAUD), P2012=6 (PZD, coerente con PZD_LEN 6 degli inverter 1 e 2), P2013=4, P700=5, P1000=5, P2000=50.
+
+### Cosa non convince o resta aperto
+1. Licenza: in Automation License Manager "STEP 7 Basic" e "STEP 7 Professional" V15 hanno l'icona di licenza mancante (hanno la chiave solo WinCC Advanced combo e PID Professional). TIA quindi sta girando probabilmente in prova a tempo. Da confermare e da sapere la scadenza prima del caricamento in campo.
+2. DB49.DBD18 dal touch: con la CPU V4 la struttura interna dei DB dei temporizzatori IEC potrebbe non avere piu' lo stesso dato allo stesso offset. Da controllare in TIA (offset di DB49 in V15.1 contro V13) e nel progetto touch quale tag e'.
+3. Confronto con la V13 non fatto: FC1 operando per operando, impostazioni CPU (avviamento, merker), indirizzi I/O e HSC. Serve il PC di Davide.
+4. Inverter 3 e 4 hanno PZD_LEN 4 mentre il file parametri dice P2012=6: se P2012 sull'inverter non e' 4, quel drive va in errore USS. Era cosi' anche nell'originale, da leggere sugli inverter.
+5. Costante del segmento 9 (corrente nastro uscita 1) sembra diversa da quella dei segmenti 4, 12, 16 (0,00096125). Letta al 50% di zoom, non certa. Da confrontare con la V13.
+6. PLC_1 resta 1BG31 V3.0 nel progetto: vale l'avviso gia' scritto, mai caricare su PLC_1.
+
+### Note pratiche
+- La stampa in PDF da TIA V15.1 di tutto PLC_2 o di tutti i blocchi non finisce in tempi utili (annullata dopo 15 minuti, file a 0 byte). Per il confronto conviene leggere a video (zoom editor 50%, tasto PagGiu) o stampare un blocco alla volta.
+- In TIA la rotella sopra un campo a tendina delle proprieta' lo mette a fuoco: non scorrere con la rotella nelle pagine delle proprieta', usare le voci dell'albero.
+- Windows App ha due connessioni salvate: "pc dell win10" e "davide pc" (senza credenziali salvate).
