@@ -239,3 +239,9 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
 - DB5 "Velinrit" di PLC_2 in V15.1: accesso standard con offset (0.0 Speedinv1 ... 46.0 T_controllo Time, 52.0 Set_serranda, 54.0 Set_serranda_liv, 56.0 PLC_min, 58.0 Plc_max Int, fine a 59). I tag del touch DB5.DBW52, DBW54 e DBD46 (Time) combaciano con questo DB. I tag DB5.DBD58 (Time) e DB5.DBD66 (Time) invece NON esistono in PLC_2 (58 e' un Int, 66 e' oltre la fine): appartengono al DB5 di un altro PLC.
 - Conclusione (deduzione, non letta nel progetto touch): il touch contiene tag di piu' PLC, e DB49.DBD18, DB5.DBD58/66 e probabilmente DB22.DBW100/102 sono dell'altro quadro (PLC_1), che non viene toccato. Conferma definitiva solo aprendo il progetto touch in WinCC flexible, oppure guardando DB49 e DB5 di PLC_1 in TIA.
 - Resta valido in generale: con la CPU V4 il touch puo' leggere solo M, I, Q e DB ad accesso standard. DB5 lo e'. DB22 "Outinv" non controllato.
+
+### Sera 2026-11-11
+- Decisione Marco: eliminare il PID "Livello_nastro" DB44. NON ancora fatto: la sessione Desktop remoto verso il Dell risulta "Session Disconnected" e il controllo dello schermo del Mac non e' stato approvato (3 richieste scadute).
+- Dubbi residui su DB44 dichiarati a Marco: non verificato se PLC_1 lo legge via rete, se il touch montato e' quello del 2016, se il programma nella CPU guasta coincide col progetto. Eliminazione reversibile (copia NAS del mattino e originale V13).
+- Bozza Gmail (marco.bmcr) in risposta alla mail del 10/11 a sw@picchiosrl.com, cc progettazione@bmcitaly.it: richiesta di aggiornamento sull'apertura del progetto. Da inviare a cura di Marco.
+- Prossimi passi sul Dell: eliminare DB44, compilare PLC_2 (hardware e software, completa), salvare, chiudere, nuova copia sul NAS in cartella separata con data.
