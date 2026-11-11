@@ -212,3 +212,23 @@ Nessuna modifica al progetto TIA. Fatta la copia di sicurezza e le verifiche pos
 - Punto 5 chiuso: nel file del progetto V13 sul NAS (blocchi interni decompressi dal Mac) esistono sia la costante 0,00096125 sia 0,00045. La costante diversa del segmento 9 e' quindi dell'originale, non un errore della conversione.
 - Confronto V13 a video non fatto: il PC di Davide e' collegato via TeamViewer (non Windows App), ma lo strumento di controllo del Mac ha rifiutato tutti i clic ("Could not verify which document this window is editing") su Windows App e TeamViewer, anche dopo aver rilasciato e ripreso il controllo. L'immagine TeamViewer sembrava ferma (orologio remoto fisso alle 13:53).
 - Leggere FC1 dal file V13 senza TIA non e' pratico: i segmenti sono salvati con riferimenti numerici agli operandi, non con gli indirizzi.
+
+### Confronto V13 originale contro V15.1 (2026-11-11, ore 14:30, a video sui due PC)
+V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Davide (CPU 1BE30 V1.0), aperto in TIA V13 senza salvare. Nessuna modifica su nessuno dei due PC.
+
+- FC1 Comando_inv: letti tutti i 17 segmenti della V13 con indirizzi assoluti. Coincidono con la V15.1 operando per operando: i 4 USS_DRV (RUN, OFF2/OFF3 NC, F_ACK M200.0, DIR, DRIVE 1-4, PZD_LEN 6/6/4/4, SPEED_SP, tutte le uscite, STATUS1 e 3-8 su DB22, CTRL3-8 a 0), i DIV per -2.0, i CONV+MUL, le marce indietro (M501.0, .1, .3, .4). Punti dubbi 3 e 10 chiusi: nessun errore di battitura, niente perso.
+- Costante corrente: segmento 9 usa 0,00045 anche nella V13, gli altri 0,00096125. E' dell'originale.
+- Impostazioni CPU V13 uguali alla V15.1: avviamento a caldo "modo di funzionamento prima di RETE OFF", controllo ciclo 150 ms senza ciclo minimo, merker di clock su MB0, merker di sistema non attivo, senza protezione.
+- Indirizzi di ingresso V13 uguali: CPU IB0-1, AI IW64-67, SB IB32, HSC1-6 ID1000-1020, posto 2 IB4-5, posto 3 IW112-119, posto 4 IB6. HSC1: frequenza, monofase, ingresso signal board. Indirizzi di uscita V13 non letti (la tabella era ordinata con gli ingressi in cima).
+- Blocchi V13 sotto "Risorse del programma": USS_PORT FC1070, USS_DRV FB1071, PID_Compact, C1 DB3, IEC_Timer_0/1/2/3/5 (DB20/21/23/24/49), t1 DB2, T_lav_Liv_ap/ch... Stessi DB della V15.1 (elenco completo non confrontato riga per riga).
+
+#### Trovato: i DB dei temporizzatori IEC cambiano struttura con la CPU V4
+- DB49 IEC_Timer_5 nella V13 (FW V1.0): ST, PT, ET, RU, IN, Q.
+- DB49 nella V15.1 (FW V4.3): solo PT, ET, IN, Q. ST e RU non ci sono piu' e l'editor non mostra offset.
+- Il progetto touch ha un tag di tipo Time su DB49.DBD18. Se quel tag e' del collegamento verso PLC_2, con la CPU nuova non legge/scrive piu' il dato giusto (o da' errore). Vale per ogni tag del touch che punta dentro un DB di temporizzatore.
+- Non ancora chiarito: il progetto touch contiene tag di piu' PLC (192.168.0.2/.3/.4) e dall'estrazione non si vede a quale collegamento appartiene DB49.DBD18; non ho verificato se DB49 nella V15.1 sia ad accesso ottimizzato ne' dove il programma usa IEC_Timer_5. Da fare: riferimenti incrociati di DB49 in TIA e apertura del progetto touch in WinCC flexible.
+- Possibile rimedio (da decidere, tocca programma e touch): passare il tempo da una variabile in un DB normale o in un merker e far puntare li' il tag del touch.
+
+#### Note pratiche
+- PC Davide: TeamViewer dal Mac. NON chiudere il riquadro blu TeamViewer sul desktop remoto: termina la sessione.
+- Dell: Windows App, connessione "192.168.1.9" con utente `.\Bmcr`.
