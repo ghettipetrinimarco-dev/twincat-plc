@@ -232,3 +232,10 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
 #### Note pratiche
 - PC Davide: TeamViewer dal Mac. NON chiudere il riquadro blu TeamViewer sul desktop remoto: termina la sessione.
 - Dell: Windows App, connessione "192.168.1.9" con utente `.\Bmcr`.
+
+### DB49 e tag del touch (2026-11-11, ore 14:45, TIA V15.1 sul Dell, sola lettura)
+- Riferimenti incrociati di DB49 IEC_Timer_5 in PLC_2: un solo utilizzo, Main OB1 segmento 1 "Chiamata manuali". E' un TOF con IN = I4.4 "q_selmanuale", PT = costante T#100MS, ET non collegato, uscita Q che abilita la chiamata di FC2 "Manuale". Nello stesso segmento I4.5 "q_selautomatico" chiama FC3 Auto_start e FC5 Autostop.
+- Quindi in PLC_2 il tempo di DB49 e' una costante del programma: un tag del touch su DB49.DBD18 non avrebbe effetto su PLC_2. Il cambio di struttura dei DB temporizzatori con la CPU V4 non tocca questo punto.
+- DB5 "Velinrit" di PLC_2 in V15.1: accesso standard con offset (0.0 Speedinv1 ... 46.0 T_controllo Time, 52.0 Set_serranda, 54.0 Set_serranda_liv, 56.0 PLC_min, 58.0 Plc_max Int, fine a 59). I tag del touch DB5.DBW52, DBW54 e DBD46 (Time) combaciano con questo DB. I tag DB5.DBD58 (Time) e DB5.DBD66 (Time) invece NON esistono in PLC_2 (58 e' un Int, 66 e' oltre la fine): appartengono al DB5 di un altro PLC.
+- Conclusione (deduzione, non letta nel progetto touch): il touch contiene tag di piu' PLC, e DB49.DBD18, DB5.DBD58/66 e probabilmente DB22.DBW100/102 sono dell'altro quadro (PLC_1), che non viene toccato. Conferma definitiva solo aprendo il progetto touch in WinCC flexible, oppure guardando DB49 e DB5 di PLC_1 in TIA.
+- Resta valido in generale: con la CPU V4 il touch puo' leggere solo M, I, Q e DB ad accesso standard. DB5 lo e'. DB22 "Outinv" non controllato.
