@@ -254,3 +254,10 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
 - Progetto salvato e chiuso. Nuova copia sul NAS: `conversione/controllo_plastica_2016_V15.1_senza_PID_2026-11-12` (52 file, 16 cartelle, 6,31 MB, 0 non riusciti). La copia del 11/11 con il PID (`controllo_plastica_2016_V13_SP1_cambio_CPU_V15.1`, 47 file) resta invariata come punto di ritorno.
 - PLC_1 non compilato e non toccato: resta 1BG31 V3.0 solo per poter aprire il progetto. Mai caricare su PLC_1.
 - Sul Dell e' aperta anche una finestra "Sistema di informazione" (guida di TIA), si puo' chiudere.
+
+### RISCHIO APERTO: CM 1241 vecchio e nuove istruzioni USS (2026-11-12)
+- Nota Siemens "S7-1200 firmware update CM 1241 V2.1.0" (support.industry.siemens.com, attachments/108587537): i moduli CM 1241 devono avere firmware V2.1.0 per essere compatibili con le nuove istruzioni punto a punto, Modbus RTU e USS; senza quell'aggiornamento supportano solo le versioni legacy.
+- In campo e nel progetto il modulo e' il CM 1241 RS485 6ES7241-1CH30-0XB0 (prima serie, 2011). La sostituzione fatta in FC1 usa le istruzioni NUOVE (USS_Port_Scan, USS_Drive_Control, che si appoggiano a Port_Config / Send_P2P / Receive_P2P).
+- Quindi il progetto compila ma la comunicazione con gli inverter potrebbe non funzionare con il CM vecchio. NON verificato: firmware reale del CM in campo, se il 1CH30 e' aggiornabile a V2.1, se TIA V15.1 offre per la CPU V4.3 una versione legacy della libreria USS.
+- Due strade possibili: (a) tenere il CM vecchio e usare la versione legacy delle istruzioni USS, se disponibile per CPU V4; (b) sostituire anche il CM con un CM 1241 RS422/485 6ES7241-1CH32-0XB0 con firmware >= V2.1 e tenere il programma attuale.
+- Da fare in TIA sul Dell: leggere versione firmware del CM nel catalogo/proprieta', e in Istruzioni > Comunicazione > Processore di comunicazione vedere le versioni selezionabili della libreria USS.
