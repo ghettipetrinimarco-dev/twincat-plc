@@ -261,3 +261,8 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
 - Quindi il progetto compila ma la comunicazione con gli inverter potrebbe non funzionare con il CM vecchio. NON verificato: firmware reale del CM in campo, se il 1CH30 e' aggiornabile a V2.1, se TIA V15.1 offre per la CPU V4.3 una versione legacy della libreria USS.
 - Due strade possibili: (a) tenere il CM vecchio e usare la versione legacy delle istruzioni USS, se disponibile per CPU V4; (b) sostituire anche il CM con un CM 1241 RS422/485 6ES7241-1CH32-0XB0 con firmware >= V2.1 e tenere il programma attuale.
 - Da fare in TIA sul Dell: leggere versione firmware del CM nel catalogo/proprieta', e in Istruzioni > Comunicazione > Processore di comunicazione vedere le versioni selezionabili della libreria USS.
+
+### Chiamata con Picchio (2026-11-12)
+- Picchio ha aperto il progetto in V13 SP2, poi ha rifatto gli stessi passaggi nostri (Sostituisci dispositivo a 1BG31 V3.0, versione superiore, PID che non compila) e sta provando a caricarlo su un PLC fisico suo. Esito non ancora noto.
+- Sua ipotesi sul guasto, dal lampeggio dei LED: corto nel quadro, non per forza CPU guasta. Consiglia di staccare le morsettiere estraibili ("basette") una alla volta per trovare il ramo in corto. Coerente con l'ipotesi gia' scritta il 10/11 (alimentazione interna che cade per corto o umidita' sul 24 V sensori o sul bus moduli).
+- Da chiedergli: quale CM 1241 ha usato nella prova e se ha tenuto le USS legacy o messo quelle nuove (vedi rischio CM 1241 sopra).
