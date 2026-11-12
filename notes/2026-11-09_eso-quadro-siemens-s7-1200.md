@@ -279,3 +279,24 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
 - Ing. Marco Tittarelli (marco.tittarelli@picchiosrl.com), in copia info@bmcr.it ed Emanuele Picchio: allegato `Controllo_plastica_V13_SP2_.zap13`, software convertito in TIA V13 SP2 per CPU 1214C AC/DC/RLY 6ES7214-1BG31-0XB0. Scrive "per la CPU che ti mando": spedisce una CPU 1BG31 fisica.
 - Allegato non ancora scaricato ne' aperto. Da disarchiviare sul PC Davide (TIA V13 SP2 Upd2) e confrontare con il nostro.
 - Stato e prossimi passi aggiornati in `notes/PROMPT_ripresa_eso_siemens.md`.
+
+### Revisione e allegato Picchio (2026-11-12 sera, nuova sessione)
+- Allegato di Picchio scaricato da Gmail (marco.bmcr) e copiato sul NAS: `conversione/picchio_2026-11-12/Controllo_plastica_V13_SP2_.zap13`, 5.018.991 byte, SHA-256 d0e9f3c6843a2d0d873d35bbf21bb0832733a76d005e9ca6b19abd1f71e08143 (uguale tra Mac e NAS). Copia anche in `~/Downloads` sul Mac. Archivio del 12/11 ore 15:46, 22 file.
+- ConversionLog.xml dell'archivio: solo "conversione terminata" per PLC_1 e PLC_2, nessun errore registrato.
+- Conteggio di stringhe in `System/PEData.plf` (indicativo: il file contiene anche storico, la conferma va fatta in TIA):
+
+| Stringa | Picchio V13 SP2 | Nostro V13 cambio CPU | Nostro V15.1 senza PID |
+|---|---|---|---|
+| USS_Port_Scan / USS_Drive_Control | 0 / 0 | 0 / 0 | 35 / 64 |
+| USS_PORT / USS_DRV | 32 / 61 | 36 / 92 | 20 / 35 |
+| Livello_nastro | 0 | 2 | 3 |
+| 6ES7214-1BG31 / 1BE30 / 1BG40 | 3 / 7 / 0 | 4 / 10 / 0 | 3 / 0 / 4 |
+
+- Lettura: Picchio ha tenuto le USS legacy (USS_PORT/USS_DRV) e probabilmente ha eliminato il PID "Livello_nastro". Con le USS legacy il rischio CM 1241 vecchio (firmware V2.1 per le istruzioni nuove) non si pone. Non sappiamo se a lui compila: in V13 le USS legacy davano 2 errori anche con la CPU originale.
+- Revisione del lavoro precedente, correzioni portate nel prompt di ripresa:
+  - La CPU al banco in STOP non dimostra "configurazione non corrispondente": nel progetto c'e' "avvio anche in caso di divergenza" e avviamento "modo prima di RETE OFF". ERROR + MAINT lampeggianti potrebbero indicare configurazione incompatibile o problema di memory card (ricordo del manuale, non verificato: una ricerca web ha dato solo blog di terzi contraddittori). Decide il buffer di diagnostica.
+  - La memory card (punto dubbio 8) era sparita dai prossimi passi: rimessa come primo controllo.
+  - Collegamento al PC di Davide: non cambiare l'IP principale (serve a TeamViewer), aggiungere un secondo IP o usare un adattatore USB-Ethernet. Confronto online con la copia V13 con CPU 1BE30 V1.0, non con quella cambiata a 1BG31.
+  - Con il CM 1241 montato al banco si puo' leggere online il suo firmware: chiude il rischio USS con un dato.
+  - Restano aperti: indirizzi di uscita V13 non confrontati, licenza STEP 7 sul Dell, TeamViewer sul Dell bloccato (serve per l'assistenza remota in ESO), il Dell (solo V15.1) non va online con la CPU vecchia FW V1.0.
+- Istruzioni operative per Marco e Simone: `notes/2026-11-12_scheda_prove_banco_eso.md`.
