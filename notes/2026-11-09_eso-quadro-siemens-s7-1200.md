@@ -301,3 +301,12 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
   - Restano aperti: indirizzi di uscita V13 non confrontati, licenza STEP 7 sul Dell, TeamViewer sul Dell bloccato (serve per l'assistenza remota in ESO), il Dell (solo V15.1) non va online con la CPU vecchia FW V1.0.
 - Istruzioni operative per Marco e Simone: `notes/2026-11-12_scheda_prove_banco_eso.md`.
 - Marco (12/11 sera): nella CPU vecchia NON c'e' memory card; al banco c'e' la CPU con la signal board SB 1221. Il punto dubbio 8 e' chiuso: il programma sta solo nella memoria interna della CPU.
+
+### Progetto Picchio aperto in TIA V13 SP2 (2026-11-12, ore 18:10, PC Davide)
+- Copia locale `C:\LAVORO_ESO\picchio_2026-11-12\`, disarchiviato in `C:\LAVORO_ESO\picchio_2026-11-12\Controllo_plastica_V13_SP2_20261113`. Il progetto V13 aperto prima (copia nostra, senza modifiche) e' stato chiuso da TIA prima del disarchivio.
+- Una copia dello .zap13 e' finita anche sul Dell in `C:\LAVORO_ESO\picchio_2026-11-12\` (comando partito nella finestra sbagliata, innocuo).
+- PLC_2: oggetti tecnologici vuoti (PID eliminato da Picchio). Risorse del programma: USS_PORT FC1070 e USS_DRV FB1071 (legacy), nessun PID_Compact.
+- Compilazione completa PLC_2: software 0 errori 0 avvisi, hardware 0 errori 0 avvisi.
+- FC1 segmento 1: USS_PORT con PORT 16#000B, BAUD 19200, come l'originale. Costanti di sistema del CM: Local~RS485_1 ID hardware 11 = 16#000B: coerente.
+- CPU: interfaccia su sottorete PN/IE_3. IP non letto (pannello proprieta' troppo piccolo via TeamViewer). Da fare: IP, avviamento, FC1 segmenti 2-17 contro la V13.
+- Copia setup STEP 7 V13 SP2 estratto (789 file, 6,84 GB) dal PC Davide al NAS `eso siemens da pc davide/setup_V13SP2_estratto` in corso alle 18:10, circa 3 MB/s. Dell: Win10 22H2 Pro for Workstations, 248 GB liberi; il readme Siemens V13 SP2 Upd4 certifica solo Win10 1903/1909. Installazione sul Dell NON ancora iniziata.
