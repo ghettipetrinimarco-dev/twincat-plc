@@ -6,7 +6,7 @@ Regola d'oro: NON caricare niente nella CPU. Se TIA propone "Carica nel disposit
 Ogni prova: montare e smontare SEMPRE a tensione tolta (230 VAC). Foto prima di staccare. Per ogni prova annotare cosa e' montato, stato dei LED RUN/STOP, ERROR, MAINT (spento / fisso / lampeggiante, colore) e fare un video di 10 secondi.
 
 ## A. Prima di alimentare
-1. Aprire lo sportellino in alto sulla CPU: c'e' una memory card? Fare foto. Non toglierla e non inserirne una.
+1. Memory card: nella CPU vecchia non c'e' (verificato 12/11). Non inserirne una.
 2. Guardare CPU, signal board, CM 1241 e moduli: ossido, residui di schiuma, umidita' sui connettori. Se c'e' umido: asciugare 24-48 ore in ambiente caldo prima di alimentare.
 
 ## B. Lettura online (PC di Davide, TIA V13 SP2) - sola lettura

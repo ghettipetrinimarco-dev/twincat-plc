@@ -300,3 +300,4 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
   - Con il CM 1241 montato al banco si puo' leggere online il suo firmware: chiude il rischio USS con un dato.
   - Restano aperti: indirizzi di uscita V13 non confrontati, licenza STEP 7 sul Dell, TeamViewer sul Dell bloccato (serve per l'assistenza remota in ESO), il Dell (solo V15.1) non va online con la CPU vecchia FW V1.0.
 - Istruzioni operative per Marco e Simone: `notes/2026-11-12_scheda_prove_banco_eso.md`.
+- Marco (12/11 sera): nella CPU vecchia NON c'e' memory card; al banco c'e' la CPU con la signal board SB 1221. Il punto dubbio 8 e' chiuso: il programma sta solo nella memoria interna della CPU.

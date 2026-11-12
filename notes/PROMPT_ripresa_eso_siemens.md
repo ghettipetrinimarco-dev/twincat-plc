@@ -8,7 +8,7 @@ Prima leggi, nel progetto `plc-twincat`, branch `claude/eso-siemens-s7-upgrade-f
 ### La diagnosi e' cambiata
 - La CPU vecchia (6ES7214-1BE30-0XB0 FW V1.0) al banco, da sola, senza signal board e senza morsettiere: RUN/STOP giallo FISSO, ERROR e MAINT lampeggianti. Non si riavvia: e' viva e in STOP.
 - PERCHE' sia in STOP non e' dimostrato. "Mancano i moduli" non basta: nel progetto c'e' "avvio della CPU anche in caso di divergenza" e avviamento "modo prima di RETE OFF" (se era in STOP o in errore prima dello spegnimento, riparte in STOP). ERROR + MAINT lampeggianti nel manuale potrebbero indicare configurazione incompatibile o un problema di memory card (ricordo, non verificato su fonte Siemens). Decide il buffer di diagnostica.
-- Memory card: non si sa se nella CPU vecchia c'e'. Va guardato prima di tutto (sportellino superiore, a tensione tolta).
+- Memory card: nella CPU vecchia NON c'e' (confermato da Marco il 12/11 sera). Al banco c'e' solo la CPU con la signal board SB 1221.
 - Nel quadro invece faceva "tutti i LED accesi, tutti spenti" in ciclo (riavvio). Quindi il guasto e' probabilmente FUORI dalla CPU: corto nel cablaggio, signal board SB 1221, CM 1241 o un modulo di espansione. E' anche l'ipotesi di Picchio.
 - La CPU vecchia potrebbe essere riutilizzabile. Non ordinare/montare nulla prima delle prove sotto.
 
@@ -40,7 +40,7 @@ Prima leggi, nel progetto `plc-twincat`, branch `claude/eso-siemens-s7-upgrade-f
 
 ## Prossimi passi, in ordine
 Le istruzioni operative per Marco e Simone (banco, online, quadro, assistenza remota) sono in `notes/2026-11-12_scheda_prove_banco_eso.md`.
-1. Memory card: guardare se c'e' nella CPU vecchia (tensione tolta), foto, non toglierla.
+1. (Fatto) Memory card: non c'e'.
 2. CPU vecchia al banco via Ethernet al PC di Davide. Non cambiare l'IP principale del PC (192.168.1.17, serve a TeamViewer): aggiungere un secondo IP 192.168.0.x, o usare un adattatore USB-Ethernet se il PC e' in DHCP. In TIA V13 aprire una COPIA del progetto con CPU originale 1BE30 V1.0 (`controllo_plastica_2016_V12_SP1_Update_4_V13_SP1`), non quella cambiata a 1BG31 ne' quella di Picchio. Accessi online, buffer di diagnostica, confronto online/offline. Sola lettura: non scaricare nulla nella CPU.
 3. Al banco, a tensione tolta ogni volta, rimontare un pezzo alla volta (SB 1221, CM 1241, moduli) e vedere quale fa tornare il riavvio. Con il CM montato leggere online il suo firmware (chiude il rischio USS). Poi nel quadro: misura del 24 V sensori a vuoto e morsettiere estraibili una alla volta.
 4. Disarchiviare il progetto di Picchio sul PC di Davide (cartella nuova) e confrontarlo con il nostro: CPU, FC1 (USS vecchie o nuove), PID, compilazione. Dirmi le differenze prima di usare l'uno o l'altro.
