@@ -266,3 +266,11 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
 - Picchio ha aperto il progetto in V13 SP2, poi ha rifatto gli stessi passaggi nostri (Sostituisci dispositivo a 1BG31 V3.0, versione superiore, PID che non compila) e sta provando a caricarlo su un PLC fisico suo. Esito non ancora noto.
 - Sua ipotesi sul guasto, dal lampeggio dei LED: corto nel quadro, non per forza CPU guasta. Consiglia di staccare le morsettiere estraibili ("basette") una alla volta per trovare il ramo in corto. Coerente con l'ipotesi gia' scritta il 10/11 (alimentazione interna che cade per corto o umidita' sul 24 V sensori o sul bus moduli).
 - Da chiedergli: quale CM 1241 ha usato nella prova e se ha tenuto le USS legacy o messo quelle nuove (vedi rischio CM 1241 sopra).
+
+### CPU vecchia al banco: non si riavvia, e' in STOP (2026-11-12, video IMG_1551 e descrizione di Marco)
+- Correzione alla nota del 10/11: nel video al banco la signal board NON e' montata e sono staccate tutte le morsettiere tranne l'alimentazione.
+- LED: RUN/STOP giallo FISSO, ERROR rosso lampeggiante, MAINT giallo lampeggiante, LED ingressi spenti. Non e' il ciclo "tutto acceso / tutto spento" visto nel quadro il 10/11.
+- Lettura (dalla tabella LED del manuale S7-1200, citata a memoria, non riletta): CPU viva in STOP con configurazione caricata non corrispondente all'hardware presente (mancano SB, CM e moduli). Coincide con quanto detto da Picchio.
+- Conseguenza: la CPU potrebbe NON essere guasta. Nel quadro si riavviava, da sola resta accesa: il guasto e' probabilmente fuori dalla CPU (corto su 24 V sensori/cablaggio, oppure SB, CM o un modulo di espansione).
+- Da fare: collegarla via Ethernet al PC Davide (TIA V12/V13, IP CPU 192.168.0.4, PC in 192.168.0.x), andare online, leggere buffer di diagnostica e confrontare/caricare il programma. Poi rimontare un pezzo alla volta (SB, CM, moduli) per trovare quello che la fa riavviare.
+- Non ordinare/montare la CPU nuova prima di questa prova.
