@@ -245,3 +245,12 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
 - Dubbi residui su DB44 dichiarati a Marco: non verificato se PLC_1 lo legge via rete, se il touch montato e' quello del 2016, se il programma nella CPU guasta coincide col progetto. Eliminazione reversibile (copia NAS del mattino e originale V13).
 - Bozza Gmail (marco.bmcr) in risposta alla mail del 10/11 a sw@picchiosrl.com, cc progettazione@bmcitaly.it: richiesta di aggiornamento sull'apertura del progetto. Da inviare a cura di Marco.
 - Prossimi passi sul Dell: eliminare DB44, compilare PLC_2 (hardware e software, completa), salvare, chiudere, nuova copia sul NAS in cartella separata con data.
+
+### PID DB44 eliminato, PLC_2 compila pulito (2026-11-12, ore 08:10, TIA V15.1 sul Dell)
+- Riferimenti incrociati di "Livello_nastro" [DB44] ricontrollati prima di eliminare: nessun punto di utilizzo.
+- Eliminato l'oggetto tecnologico "Livello_nastro" [DB44] (PID_Compact V1.0) su decisione di Marco. La cartella Oggetti tecnologici di PLC_2 ora e' vuota.
+- Compilazione PLC_2, software (compilazione completa): 0 errori, 0 avvisi.
+- Compilazione PLC_2, hardware (compilazione completa): 0 errori, 2 avvisi gia' noti (nessun livello di protezione; I32.0 della signal board usato per operazioni High-Speed).
+- Progetto salvato e chiuso. Nuova copia sul NAS: `conversione/controllo_plastica_2016_V15.1_senza_PID_2026-11-12` (52 file, 16 cartelle, 6,31 MB, 0 non riusciti). La copia del 11/11 con il PID (`controllo_plastica_2016_V13_SP1_cambio_CPU_V15.1`, 47 file) resta invariata come punto di ritorno.
+- PLC_1 non compilato e non toccato: resta 1BG31 V3.0 solo per poter aprire il progetto. Mai caricare su PLC_1.
+- Sul Dell e' aperta anche una finestra "Sistema di informazione" (guida di TIA), si puo' chiudere.
