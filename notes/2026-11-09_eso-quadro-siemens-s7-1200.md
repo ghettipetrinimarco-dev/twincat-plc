@@ -274,3 +274,8 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
 - Conseguenza: la CPU potrebbe NON essere guasta. Nel quadro si riavviava, da sola resta accesa: il guasto e' probabilmente fuori dalla CPU (corto su 24 V sensori/cablaggio, oppure SB, CM o un modulo di espansione).
 - Da fare: collegarla via Ethernet al PC Davide (TIA V12/V13, IP CPU 192.168.0.4, PC in 192.168.0.x), andare online, leggere buffer di diagnostica e confrontare/caricare il programma. Poi rimontare un pezzo alla volta (SB, CM, moduli) per trovare quello che la fa riavviare.
 - Non ordinare/montare la CPU nuova prima di questa prova.
+
+### Mail di Picchio (2026-11-12, ore 16:00)
+- Ing. Marco Tittarelli (marco.tittarelli@picchiosrl.com), in copia info@bmcr.it ed Emanuele Picchio: allegato `Controllo_plastica_V13_SP2_.zap13`, software convertito in TIA V13 SP2 per CPU 1214C AC/DC/RLY 6ES7214-1BG31-0XB0. Scrive "per la CPU che ti mando": spedisce una CPU 1BG31 fisica.
+- Allegato non ancora scaricato ne' aperto. Da disarchiviare sul PC Davide (TIA V13 SP2 Upd2) e confrontare con il nostro.
+- Stato e prossimi passi aggiornati in `notes/PROMPT_ripresa_eso_siemens.md`.
