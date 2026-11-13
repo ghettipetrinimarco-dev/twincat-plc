@@ -310,3 +310,11 @@ V13 = `C:\LAVORO_ESO\controllo_plastica_2016_V12_SP1_Update_4_V13_SP1` sul PC Da
 - FC1 segmento 1: USS_PORT con PORT 16#000B, BAUD 19200, come l'originale. Costanti di sistema del CM: Local~RS485_1 ID hardware 11 = 16#000B: coerente.
 - CPU: interfaccia su sottorete PN/IE_3. IP non letto (pannello proprieta' troppo piccolo via TeamViewer). Da fare: IP, avviamento, FC1 segmenti 2-17 contro la V13.
 - Copia setup STEP 7 V13 SP2 estratto (789 file, 6,84 GB) dal PC Davide al NAS `eso siemens da pc davide/setup_V13SP2_estratto` in corso alle 18:10, circa 3 MB/s. Dell: Win10 22H2 Pro for Workstations, 248 GB liberi; il readme Siemens V13 SP2 Upd4 certifica solo Win10 1903/1909. Installazione sul Dell NON ancora iniziata.
+
+### Dell pronto per ESO (2026-11-13, in corso)
+- Copiati sul Dell dal NAS: `C:\LAVORO_ESO\setup_V13SP2_estratto` (789 file, 6.835.761.956 byte, uguale all'origine) e `C:\LAVORO_ESO\controllo_plastica_2016_V13_SP1_per_CPU_vecchia` (progetto 2016 V13 SP1 con CPU 1BE30 V1.0, 19 file). Lo .zap13 di Picchio e' in `C:\LAVORO_ESO\picchio_2026-11-12`.
+- TIA V15.1 chiuso (nessun progetto aperto). TIA V15.1 vede la scheda cablata Intel Ethernet I219-LM: e' quella da usare in campo.
+- Setup STEP 7 Basic V13 SP2 Upd4 (trial: uso consentito solo per test e validazione) avviato; ha chiesto un riavvio, Dell riavviato e tornato raggiungibile in RDP dopo circa 1 minuto. Dopo il riavvio il setup riparte da solo.
+- Scelte: lingue inglese + italiano, configurazione Tipico (STEP 7 Basic, WinCC Basic, Automation License Manager, migrazione), percorso `C:\Program Files (x86)\Siemens\Automation`, 6,3 GB. Licenze accettate su conferma di Marco.
+- FERMO alla pagina "Impostazioni di sicurezza" (permessi su `C:\ProgramData\Siemens\Automation`): la casella va spuntata da Marco, poi Avanti.
+- Accesso remoto in ESO: Windows App funziona solo in LAN. TeamViewer 15.83.5 sul Dell (DESKTOP-5K306R4, ID 1 183 595 362): servizio attivo, interfaccia ferma su "Starting TeamViewer" dentro la sessione RDP; registrato su un account diverso da quello del Mac (non compare tra i Dispositivi). Proposta: installare AnyDesk sul Dell (in attesa di ok di Marco) oppure verificare TeamViewer aperto direttamente sul Dell.
