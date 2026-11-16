@@ -1,57 +1,50 @@
 Riprendiamo il lavoro sul quadro Siemens di ESO Recycling (Quadro 2 Linea B, ex Pianezze, PLC_2 nel progetto TIA "controllo_plastica").
 
-Prima leggi, nel progetto `plc-twincat`, branch `claude/eso-siemens-s7-upgrade-f90c6a` (non unito a main, niente merge senza il mio ok):
-- `notes/2026-11-09_eso-quadro-siemens-s7-1200.md`: storia completa. Le sezioni che contano sono quelle dal 2026-11-11 in poi (revisione critica, confronto V13/V15.1, DB49, PID eliminato, rischio CM 1241, chiamata Picchio, CPU al banco in STOP).
+Prima leggi, nel progetto `plc-twincat`, branch `claude/eso-siemens-s7-upgrade-f90c6a` (fare `git fetch` e usare origin: la copia locale puo' essere vecchia; non unito a main, niente merge senza il mio ok):
+- `notes/2026-11-09_eso-quadro-siemens-s7-1200.md`: storia completa. Conta soprattutto dalla sezione "In campo con Simone (2026-11-16 pomeriggio)" in poi.
+- `notes/2026-11-12_scheda_prove_banco_eso.md`: istruzioni per Simone (banco, quadro, assistenza remota).
 
-## Stato al 2026-11-12 sera
+## Stato al 2026-11-16 ore 18:07 (Simone in ESO col Dell collegato al quadro)
 
-### La diagnosi e' cambiata
-- La CPU vecchia (6ES7214-1BE30-0XB0 FW V1.0) al banco, da sola, senza signal board e senza morsettiere: RUN/STOP giallo FISSO, ERROR e MAINT lampeggianti. Non si riavvia: e' viva e in STOP.
-- PERCHE' sia in STOP non e' dimostrato. "Mancano i moduli" non basta: nel progetto c'e' "avvio della CPU anche in caso di divergenza" e avviamento "modo prima di RETE OFF" (se era in STOP o in errore prima dello spegnimento, riparte in STOP). ERROR + MAINT lampeggianti nel manuale potrebbero indicare configurazione incompatibile o un problema di memory card (ricordo, non verificato su fonte Siemens). Decide il buffer di diagnostica.
-- Memory card: nella CPU vecchia NON c'e' (confermato da Marco il 12/11 sera). Al banco c'e' solo la CPU con la signal board SB 1221.
-- Nel quadro invece faceva "tutti i LED accesi, tutti spenti" in ciclo (riavvio). Quindi il guasto e' probabilmente FUORI dalla CPU: corto nel cablaggio, signal board SB 1221, CM 1241 o un modulo di espansione. E' anche l'ipotesi di Picchio.
-- La CPU vecchia potrebbe essere riutilizzabile. Non ordinare/montare nulla prima delle prove sotto.
+### Cosa c'e' nel quadro
+- Montata la CPU di Picchio: 1214C AC/DC/RLY 6ES7214-1BG31-0XB0, FW V3.0.2, IP 192.168.0.4, MAC 00-1C-06-1A-3F-38. In RUN.
+- Programma = progetto di Picchio `Controllo_plastica_V13_SP2_.zap13` (USS legacy, PID eliminato). Confronto offline/online: uguale.
+- Picchio (ing. Tittarelli, collegato al Dell con Supremo) ha fatto 2 caricamenti: 17:54 (STOP/avviamento da PC) e 18:00 (solo software, "Arresta tutto", poi "Avvia tutto", 0 errori). Non so cosa abbia cambiato: da chiedergli.
+- CPU: "OK, errori nella componente subordinata"; moduli in TIA con stato "?"/"Sconosciuto"; all'avvio 2 eventi "componente hardware rimosso o errato" (HW_ID 15). Pero' il modulo SM 1223 DC/RLY al posto 2 ha DIAG verde e i suoi LED corrispondono ai valori online: funziona.
 
-### Picchio (ing. Marco Tittarelli, marco.tittarelli@picchiosrl.com)
-- Mail del 12/11 ore 16:00 (conversazione "ESO Recycling - Quadro 2 Linea B...", account Gmail marco.bmcr): allegato `Controllo_plastica_V13_SP2_.zap13` (archivio TIA V13 SP2, circa 6,9 MB), convertito per CPU 1214C AC/DC/RLY 6ES7214-1BG31-0XB0 (FW V3.0). Scrive "per la CPU che ti mando": sta spedendo una CPU 1BG31 fisica.
-- In chiamata ha detto di aver fatto i nostri stessi passaggi (Sostituisci dispositivo, PID che non compila). Al suo banco la CPU non andava in RUN perche' non ha la signal board (HSC1 usa I32.0 che sta sulla SB).
-- Allegato scaricato (5,0 MB) e copiato sul NAS in `conversione/picchio_2026-11-12/Controllo_plastica_V13_SP2_.zap13` (SHA-256 uguale all'originale, d0e9f3c6...). Una copia resta in `~/Downloads` sul Mac. NON ancora aperto in TIA.
-- Indicazione dal contenuto del file (conteggio di stringhe, non definitivo): Picchio ha tenuto le USS legacy (USS_PORT/USS_DRV, nessuna USS_Port_Scan/USS_Drive_Control) e "Livello_nastro" non compare piu' (PID probabilmente eliminato). Se confermato, la sua strada evita il rischio CM 1241. NON so se a lui compila a 0 errori: nella nostra V13 le USS legacy davano 2 errori.
-- Da aprire sul PC di Davide (TIA V13 SP2 Upd2), Progetto > Disarchivia, in una cartella nuova in `C:\LAVORO_ESO\`.
+### Diagnosi a oggi
+- Uscite: il programma comanda QB2=16#27 (Q2.0, 2.1, 2.2, 2.5) e QB3=16#47 (Q3.0, 3.1, 3.2, 3.6); Simone conferma i LED accesi uguali. 110 V presente sul comune 1L.
+- Ingressi: IB4=16#1F (I4.4 selettore manuale = 1), IB5=16#82, IB6=16#06.
+- PUNTO CHIAVE: I5.0 "q_Emer" = 0 (Main OB1 segmento 2). Con emergenza a 0 restano spente le abilitazioni inverter Q0.0, Q0.6, Q0.5, Q1.1 e viene resettata Q3.3 "ok_sucessivi" (consenso verso quadro vecchio). Da verificare con Simone: pulsanti di emergenza e riarmi, LED DI b .0 del modulo posto 2 deve accendersi.
+- Lamentela iniziale di Simone: dal pannello i comandi manuali non attivano i teleruttori. Non ancora chiaro quali teleruttori non attaccano (attesi eccitati con le uscite attive: 212KM01, 212KM02, 212KM03, 212KM06, 213KM01, 213KM02, 213KM03).
+- Pannello MP277: messaggio "chiave di licenza non disponibile Sm@rtService" (opzione pannello, non blocca). Il pannello e' sull'altra rete: con il Dell al posto del cavo grigio (va all'altro quadro) il pannello potrebbe non parlare col PLC_2.
 
-### Il nostro progetto V15.1 (strada alternativa, CPU 1BG40 FW V4.3)
-- Sul Dell: `C:\LAVORO_ESO\controllo_plastica_2016_V13_SP1_cambio_CPU_V15.1`, salvato e chiuso. PLC_2 compila: software 0 errori 0 avvisi, hardware 0 errori 2 avvisi noti. PID DB44 eliminato (decisione mia).
-- Copie NAS in `\\NAS\Condivisione\Interscambio\X MARCO\eso siemens da pc davide\conversione\`: `controllo_plastica_2016_V15.1_senza_PID_2026-11-12` (52 file, attuale) e `controllo_plastica_2016_V13_SP1_cambio_CPU_V15.1` (47 file, con PID, punto di ritorno). Sul Mac il NAS e' `/Volumes/Condivisione`.
-- FC1 confrontato a video con la V13 originale: 17 segmenti identici operando per operando. Impostazioni CPU, ingressi e HSC1 uguali.
-- Mai caricato su una CPU, nemmeno in PLCSIM.
-- RISCHIO APERTO: in campo c'e' il CM 1241 RS485 vecchio (6ES7241-1CH30-0XB0). Nota Siemens: per le istruzioni USS nuove (USS_Port_Scan / USS_Drive_Control, usate nel nostro V15.1) il CM deve avere firmware V2.1.0. Non verificato il firmware reale del CM ne' se TIA V15.1 offre le USS legacy per CPU V4.
-- Se si usa la CPU 1BG31 di Picchio con il suo progetto V13 SP2, questo progetto V15.1 diventa la riserva.
+### Schema elettrico (`Quadro Gestione impianto/Schema elettrico/Quadro_2.pdf`, NAS)
+- Foglio 202 (pag. PDF 23): uscite CPU Q0.x/Q1.x -> 202KM01..11. Foglio 212 (pag. 27): DQ a modulo posto 2, comuni 1L (Q2.0-2.3) e 2L (Q2.4-2.7) su 110L-01, fili A2.x -> bobine 212KM01..08, ritorno 110N-00. Foglio 213 (pag. 28): DQ b, comuni 3L/4L, Q3.0-3.2 -> 213KM01..03, Q3.3 consenso vaglio verso quadro vecchio, Q3.6/3.7 non collegate. Origine di 110L-01 non trovata.
 
-### Altri punti aperti
-- Programma di partenza: e' la versione del 05/09/2016, la piu' probabile ma mai confrontata con la CPU reale. Ora che la CPU vecchia risulta viva si puo' confrontare online.
-- Touch MP277 (WinCC flexible, driver S7 300/400): con CPU V3 o V4 serve PUT/GET attivo. Tag su DB5 e DB22; DB49.DBD18 probabilmente di PLC_1 (deduzione).
-- PZD_LEN 4 sugli inverter 3 e 4 contro P2012=6 nel file parametri: era cosi' nell'originale, da leggere sugli inverter.
-- Licenza STEP 7 V15 sul Dell: in Automation License Manager senza chiave (probabile prova a tempo), scadenza non nota.
-- PLC_1 (altro quadro, funzionante): nei progetti convertiti e' stato cambiato a 1BG31 solo per poterli aprire. MAI caricare su PLC_1.
-- Bozza Gmail a sw@picchiosrl.com con "abbiamo il progetto V15.1": NON inviarla, superata dalla chiamata.
-- Indirizzi di USCITA della V13 mai confrontati con la V15.1 (gli ingressi si').
-- Il Dell ha solo TIA V15/V15.1: non va online con la CPU vecchia FW V1.0. Se in campo torna la CPU vecchia serve TIA V13 (oggi solo sul PC di Davide).
-- TeamViewer sul Dell si blocca all'avvio: per l'assistenza da remoto in ESO va sistemato prima (o installato un altro strumento concordato con Picchio).
+### Il Dell (portatile per il campo)
+- TIA V15.1 + STEP 7 Basic V13 SP2 Upd4 (trial, installato oggi). Per la CPU di Picchio usare la V13: progetto disarchiviato in `C:\LAVORO_ESO\Controllo_plastica_V13_SP2_20261113`, interfaccia PN/IE Intel I219-LM "direttamente nel posto connettore 1 X1". TIA aggiunge IP 192.168.0.241 alla scheda cablata (sparisce al riavvio, va riconfermato).
+- Accesso remoto: TeamViewer funziona se aperto sul Dell stesso (ID 1 183 595 362, password la detta Simone, non digitarla tu). AnyDesk installato (ID 623 085 995), accettazione da provare.
+- Copie sul Dell: setup V13 in `C:\LAVORO_ESO\setup_V13SP2_estratto`, progetto 2016 per CPU vecchia in `C:\LAVORO_ESO\controllo_plastica_2016_V13_SP1_per_CPU_vecchia`, backup registro `C:\LAVORO_ESO\session_manager_backup.reg`.
 
-## Prossimi passi, in ordine
-Le istruzioni operative per Marco e Simone (banco, online, quadro, assistenza remota) sono in `notes/2026-11-12_scheda_prove_banco_eso.md`.
-1. (Fatto) Memory card: non c'e'.
-2. CPU vecchia al banco via Ethernet al PC di Davide. Non cambiare l'IP principale del PC (192.168.1.17, serve a TeamViewer): aggiungere un secondo IP 192.168.0.x, o usare un adattatore USB-Ethernet se il PC e' in DHCP. In TIA V13 aprire una COPIA del progetto con CPU originale 1BE30 V1.0 (`controllo_plastica_2016_V12_SP1_Update_4_V13_SP1`), non quella cambiata a 1BG31 ne' quella di Picchio. Accessi online, buffer di diagnostica, confronto online/offline. Sola lettura: non scaricare nulla nella CPU.
-3. Al banco, a tensione tolta ogni volta, rimontare un pezzo alla volta (SB 1221, CM 1241, moduli) e vedere quale fa tornare il riavvio. Con il CM montato leggere online il suo firmware (chiude il rischio USS). Poi nel quadro: misura del 24 V sensori a vuoto e morsettiere estraibili una alla volta.
-4. Disarchiviare il progetto di Picchio sul PC di Davide (cartella nuova) e confrontarlo con il nostro: CPU, FC1 (USS vecchie o nuove), PID, compilazione. Dirmi le differenze prima di usare l'uno o l'altro.
-5. Decidere con me quale CPU e quale progetto vanno nel quadro (CPU vecchia se sana, 1BG31 di Picchio, o 1BG40 con il nostro V15.1) e chiarire con Picchio il punto CM 1241 / USS.
-6. Caricamento solo su PLC_2, con linea in sicurezza (Auto_start puo' avviare i nastri), poi prova USS sui 4 azionamenti e prova touch.
+### Altre strade (riserva)
+- CPU vecchia 1BE30 FW V1.0 (in azienda, viva, in STOP al banco, senza memory card): richiede TIA V13 (PC Davide o ora anche Dell).
+- Nostro progetto V15.1 per CPU 1BG40 (NAS `conversione/controllo_plastica_2016_V15.1_senza_PID_2026-11-12`): usa USS nuove, rischio CM 1241 vecchio (serve FW V2.1).
+- PLC_1 (altro quadro) nei progetti convertiti e' 1BG31 solo per aprirli: MAI caricare su PLC_1.
+
+## Prossimi passi
+1. Esito emergenza: se I5.0 torna a 1, verificare che gli inverter si abilitino e che i teleruttori attacchino.
+2. Chiedere a Picchio cosa ha modificato e caricato alle 17:54 e 18:00; fare una copia (archivio) del progetto attuale sul Dell e sul NAS.
+3. Se i teleruttori non attaccano con uscite e 110 V presenti: misure su uscita (filo A2.x) e bobina A1-A2 (vedi scheda).
+4. Rimettere il cavo grigio e verificare comunicazione pannello / PLC_1.
+5. Registrare tutto nella nota, commit e push sul branch.
+
+## Regole
+- Sul PLC solo lettura: niente caricamenti, forzature o RUN/STOP senza mio ok esplicito; se c'e' Picchio collegato, solo osservare (screenshot in background, nessun clic).
+- Modifiche di sistema su Windows (IP, registro, impostazioni di sicurezza), password e licenze: le fa Marco.
+- Lavora solo su copie, non toccare gli originali di Davide, non inventare indirizzi, registra tutto nella nota, commit e push sul branch `claude/eso-siemens-s7-upgrade-f90c6a`.
 
 ## Controllo remoto dal Mac
-- Dell Win10 "Bmcr" (TIA V15.1): Windows App, connessione "192.168.1.9", utente `.\Bmcr`. Keyboard Mode Unicode.
-- PC Davide (192.168.1.17, Win7, TIA V12 e V13 SP2): TeamViewer, "DAVIDE-PC", password salvata nell'elenco Dispositivi. NON chiudere il riquadro blu TeamViewer sul desktop remoto: termina la sessione.
-- Serve il controllo schermo completo (lo approvo io, restare davanti al Mac: la richiesta scade). Se i clic vengono rifiutati con "Could not verify which document this window is editing": chiudere e riaprire l'app Claude.
-- In TIA: riferimenti incrociati dal menu tasto destro (F11 sul Mac apre la scrivania). Non usare la rotella sopra i campi delle proprieta'. La stampa PDF di tutto il PLC non finisce: leggere a video (zoom 50%, PagGiu).
-- Copie verso il NAS: `robocopy "origine" "destinazione" /E /R:1 /W:1 /NFL /NDL` dal Prompt dei comandi, poi ricontare i file dal Mac.
-
-Regole: lavora solo su copie, non toccare gli originali di Davide, non inventare indirizzi, dimmi cosa vuoi cambiare prima di cambiarlo, registra tutto nella nota e fai commit e push sul branch.
+- Dell: oggi via TeamViewer (finestra "Gabriele (1)" sul Mac). In LAN anche Windows App "192.168.1.9" utente `.\Bmcr`, Keyboard Mode Unicode.
+- PC Davide (192.168.1.17, Win7, TIA V12 e V13 SP2): TeamViewer "DAVIDE-PC". Non chiudere il riquadro blu TeamViewer remoto.
+- Serve il controllo schermo completo (lo approvo io). Per solo osservare bastano gli screenshot in background (app_screenshot).
