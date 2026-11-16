@@ -35,7 +35,8 @@ Ordine: 1) signal board SB 1221, 2) CM 1241 RS485, 3) moduli uno alla volta: SM 
 ## E. Assistenza da remoto quando Simone e' in ESO
 Si', Picchio o noi possiamo aiutarlo da remoto. Condizioni:
 - Il portatile deve avere internet (Wi-Fi ESO o hotspot del telefono) e, insieme, il cavo Ethernet verso il PLC con IP fisso 192.168.0.x sulla scheda cablata. Le due cose funzionano in contemporanea.
-- Strumento di controllo remoto installato e provato PRIMA di partire. Sul Dell TeamViewer si blocca all'avvio: va sistemato o sostituito con lo strumento che usa Picchio (chiedere quale).
+- Strumento remoto: sul Dell c'e' AnyDesk (ID 623 085 995, parte da solo con Windows). Simone apre AnyDesk, noi chiamiamo quell'ID, a lui compare una finestra: preme "Accetta". Nessuna password salvata. TeamViewer sul Dell non va usato (registrato su un altro account, interfaccia bloccata).
+- AnyDesk sul Mac e sul Dell ha la licenza gratuita "per uso non professionale": per un intervento puo' bastare, ma AnyDesk puo' limitare le sessioni se rileva uso aziendale. Se Picchio vuole collegarsi, gli si da' lo stesso ID.
 - Versione TIA giusta: il Dell ha solo V15/V15.1 e funziona con la CPU di Picchio (1BG31 V3.0, progetto da aggiornare) o con una 1BG40. NON va online con la CPU vecchia FW V1.0: per quella serve TIA V13 (oggi solo sul PC di Davide, che e' fisso).
 - Prova di collegamento remoto dall'azienda prima del giorno in ESO.
 - Chi assiste da remoto non vede la linea: ogni comando che puo' muovere qualcosa (RUN, forzature, caricamento) solo con conferma di Simone sul posto e linea in sicurezza.
